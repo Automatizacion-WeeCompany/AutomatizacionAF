@@ -1,0 +1,27 @@
+{
+  "name": "automatizacion-certificacion-pom",
+  "version": "1.0.0",
+  "type": "commonjs",
+  "description": "Automatización Playwright FlexSalud",
+  "scripts": {
+    "test": "NODE_NO_WARNINGS=1 npx playwright test",
+    "test:ui": "NODE_NO_WARNINGS=1 npx playwright test --ui",
+    "test:headless": "NODE_NO_WARNINGS=1 npx playwright test --headed=false",
+    "clean": "rd /s /q dist && rd /s /q test-results && rd /s /q node_modules",
+    "build": "npx tsc --noEmit",
+    "merge-polizas": "ts-node src/utilidades/consolidarReportesPolizas.ts",
+    "test:full": "playwright test && npm run merge-polizas"
+  },
+  "dependencies": {
+    "@faker-js/faker": "^10.0.0",
+    "@playwright/test": "^1.45.0",
+    "exceljs": "^4.4.0",
+    "faker": "^6.6.6",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@types/node": "^24.7.0",
+    "@types/xlsx": "^0.0.35",
+    "typescript": "^5.4.0"
+  }
+}

@@ -1,0 +1,6 @@
+projectKey=AltaMedicos
+serverUrl=http://localhost:9010
+serverVersion=25.10.0.114319
+dashboardUrl=http://localhost:9010/dashboard?id=AltaMedicos
+ceTaskId=9dd46154-6ac9-4c5e-ac44-053d8ac2c8e3
+ceTaskUrl=http://localhost:9010/api/ce/task?id=9dd46154-6ac9-4c5e-ac44-053d8ac2c8e3

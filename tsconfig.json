@@ -1,0 +1,62 @@
+{
+  /*
+  ============================================================
+  CONFIGURACIÓN DE TYPESCRIPT PARA PROYECTOS QA (PLAYWRIGHT)
+  ============================================================
+  Esta configuración fue adaptada para:
+  - Node 18–20
+  - Playwright v1.56 o superior
+  - TypeScript 5.x
+
+  Objetivos:
+  Evitar errores de compatibilidad entre módulos (ESM/CJS)
+  Mantener compatibilidad con Playwright (usa CommonJS)
+  Permitir imports limpios (@flows, @pages, etc.)
+  Silenciar advertencias innecesarias de NodeNext
+  Facilitar compilación y despliegue limpio en CI/CD
+  */
+  "compilerOptions": {
+    // Código moderno, compatible con Node 20
+    "target": "ES2020",                // Qué versión de JS genera (usa async/await y features modernas)
+    "lib": ["ES2020", "DOM"],          // Librerías base (necesario para usar objetos globales del navegador)
+
+    // Módulos
+    "module": "NodeNext",              // Importante: Playwright usa CommonJS, no ESM
+    "moduleResolution": "NodeNext",      // Cómo resolver imports (Node clásico)
+    "resolveJsonModule": true,         // Permite importar archivos .json directamente
+    "esModuleInterop": true,           // Facilita imports de librerías con export default (como XLSX, dotenv, etc.)
+
+    // Validaciones
+    "strict": true,                    // Habilita todas las comprobaciones de tipos (buena práctica)
+    "skipLibCheck": true,              // Evita verificar archivos .d.ts de librerías externas
+    "forceConsistentCasingInFileNames": true, // Evita errores en mayúsculas/minúsculas entre sistemas operativos
+
+    // Rutas de compilación
+    "outDir": "./dist",                // Carpeta donde se genera el código compilado
+    "rootDir": "./src",                // Carpeta raíz del código fuente
+
+    // Imports personalizados (alias)
+    "baseUrl": "./",                   // Punto base de referencia
+    "paths": {
+      "@pages/*": ["src/paginas/*"],   // Ejemplo: import { LoginPage } from '@pages/LoginPage';
+      "@flows/*": ["src/flows/*"],     // Ejemplo: import { AltaMedicoFlow } from '@flows/AltaMedicoFlow';
+      "@utils/*": ["src/utilerias/*"], // Ejemplo: import { CargarExcel } from '@utils/CargarExcel';
+      "@data/*": ["src/datosPrueba/*"] // Ejemplo: import data from '@data/DatosMedicos.json';
+    },
+
+    // Tipos globales
+
+    "types": ["node", "@playwright/test"] // Incluye tipos de Node y Playwright (para intellisense y compilación)
+  },
+
+  // Qué archivos incluir en la compilación
+  "include": ["src/**/*"],
+
+  // Qué carpetas excluir
+  "exclude": [
+    "node_modules",                    // Librerías externas
+    "dist",                            // Carpeta de salida
+    "playwright.config.ts"             // Archivo ejecutado directamente por Playwright (no se compila)
+  ]
+}
+
