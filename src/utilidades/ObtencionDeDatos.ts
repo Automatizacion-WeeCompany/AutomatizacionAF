@@ -2,7 +2,7 @@
 /*
 @parametro obtenerEscenariosPorHoja: Lee los datos de los escenarios desde un archivo Excel y los devuelve como una lista de objetos.
 */
-import path from 'path';
+import path from 'node:path';
 import { CargarExcel } from './CargaDatosExcel';
 
 export class ExtraerDatosExcel {
