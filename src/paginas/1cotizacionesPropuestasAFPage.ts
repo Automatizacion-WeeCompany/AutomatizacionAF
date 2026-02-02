@@ -1,6 +1,6 @@
 import { Page } from "@playwright/test";
 
-export class cotizacionesPropuestasAFPage {
+export class CotizacionesPropuestasAFPage {
     constructor(private readonly page: Page) { }
 
     async clickBtnNuevaCotizacion() {

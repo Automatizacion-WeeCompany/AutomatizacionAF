@@ -1,4 +1,4 @@
-import { Page, Locator } from '@playwright/test';
+import { Page, Locator, expect } from '@playwright/test';
 
 export async function seleccionarOpcionAleatoria(page: Page, selector: string): Promise<{ value: string; text: string }> {
 
@@ -68,31 +68,6 @@ export async function seleccionarOpcionAleatoriaOriginal(page: Page, selector: s
   return opcionSeleccionada;
 }
 
-// export async function seleccionarOpcionAleatoriaOriginal(page: Page, selector: string | Locator): Promise<{ value: string; text: string }> {
-
-//   const locator = typeof selector === "string" ? page.locator(selector) : selector;
-
-//   const opciones = await locator.evaluateAll(options => {
-//     return options.filter(o => o instanceof HTMLOptionElement).map(o => ({
-//       value: (o as HTMLOptionElement).value, text: o.textContent?.trim() || ''
-//     }));
-//   });
-
-//   const opcionesValidas = opciones.filter(o => o.value !== '' && !['Colonia', 'Sexo', 'Mes', 'Dia', 'Parentesco'].includes(o.text));
-
-//   if (opcionesValidas.length === 0) {
-//     console.log(`❌ No hay opciones válidas en el selector`);
-//   }
-
-//   const opcion = opcionesValidas[Math.floor(Math.random() * opcionesValidas.length)];
-
-//   await locator.selectOption(opcion.value);
-//   console.log(`✅ Opción seleccionada: ${opcion.text}`);
-
-//   return opcion;
-// }
-
-
 export async function seleccionarAnoMayor18(page: Page, selector: string) {
   const anoActualMenos18 = new Date().getFullYear() - 19;
 
@@ -139,3 +114,65 @@ export async function seleccionarYVerificar(page: Page, selector: string, value:
   );
 }
 
+export async function seleccionarOpcionAleatoriaDesdeLocator(
+  selectLocator: Locator
+): Promise<{ value: string; text: string }> {
+
+  // 1️ Esperar a que el select sea visible
+  await selectLocator.waitFor({ state: 'visible', timeout: 15000 });
+
+  // 2️ Esperar a que el select tenga opciones cargadas
+  await expect.poll(
+    async () => await selectLocator.locator('option').count(),
+    {
+      timeout: 15000,
+      message: 'Esperando a que el select cargue opciones'
+    }
+  ).toBeGreaterThan(1);
+
+  // 3️ Extraer opciones
+  const opciones = await selectLocator.locator('option').evaluateAll(options =>
+    options.map(option => ({
+      value: option.getAttribute('value') ?? '',
+      text: option.textContent?.trim() ?? ''
+    }))
+  );
+
+  // 4️ Filtrar placeholders
+  const opcionesValidas = opciones.filter(o =>
+    o.text &&
+    !['Colonia', 'Sexo', 'Mes', 'Dia', 'Parentesco', 'Estado civil', 'Seleccione una opción'].includes(o.text)
+  );
+
+  if (opcionesValidas.length === 0) {
+    throw new Error('❌ No hay opciones válidas para seleccionar');
+  }
+
+  // 5️ Selección aleatoria
+  const opcionSeleccionada =
+    opcionesValidas[Math.floor(Math.random() * opcionesValidas.length)];
+
+  await selectLocator.selectOption(opcionSeleccionada.value);
+
+  console.log(`✅ Opción seleccionada: ${opcionSeleccionada.text}`);
+
+  return opcionSeleccionada;
+}
+
+
+export async function esperarOpcionesEnSelect(selectLocator: Locator, minOpciones = 1, timeout = 15000): Promise<void> {
+
+  // Espera a que el select exista y sea visible
+  await selectLocator.waitFor({ state: 'visible', timeout });
+
+  // Espera activa hasta que haya opciones reales
+  await expect.poll(
+    async () => {
+      return await selectLocator.locator('option').count();
+    },
+    {
+      timeout,
+      message: 'Esperando que el select tenga opciones disponibles'
+    }
+  ).toBeGreaterThan(minOpciones);
+}

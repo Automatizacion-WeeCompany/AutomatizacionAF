@@ -1,0 +1,44 @@
+[
+  {
+    "estado": "Faltan textos",
+    "faltantes": [
+      "Descartadas",
+      "Estatus",
+      "Búsqueda",
+      "Limpiar",
+      "Nueva Cotización",
+      "Cotizaciones Totales:",
+      "Consultar cotizaciones de subagentes",
+      "Ver Todos",
+      "No° Cotizacion",
+      "Folio",
+      "Fecha de cotizacion",
+      "Nombre del prospecto",
+      "Tipo de póliza",
+      "Plan cotizado",
+      "Estatus"
+    ],
+    "fecha": "2026-01-21T17:53:19.895Z"
+  },
+  {
+    "estado": "Faltan textos",
+    "faltantes": [
+      "Cotizaciones Totales:"
+    ],
+    "fecha": "2026-01-21T17:57:28.126Z"
+  },
+  {
+    "estado": "Faltan textos",
+    "faltantes": [
+      "Cotizaciones Totales:"
+    ],
+    "fecha": "2026-01-21T18:04:04.152Z"
+  },
+  {
+    "estado": "Faltan textos",
+    "faltantes": [
+      "Cotizaciones Totales:"
+    ],
+    "fecha": "2026-01-21T18:09:28.180Z"
+  }
+]

@@ -1,0 +1,32 @@
+[
+  {
+    "estado": "Faltan textos",
+    "faltantes": [
+      "¿Cuál es el tipo de póliza a cotizar?",
+      "Individual",
+      "Familiar",
+      "Datos del Titular",
+      "Nombre (s)",
+      "Apellido(s)",
+      "Edad",
+      "País de Residencia",
+      "Siguiente"
+    ],
+    "fecha": "2026-01-20T22:03:28.947Z"
+  },
+  {
+    "estado": "Faltan textos",
+    "faltantes": [
+      "¿Cuál es el tipo de póliza a cotizar?",
+      "Individual",
+      "Familiar",
+      "Datos del Titular",
+      "Nombre (s)",
+      "Apellido(s)",
+      "Edad",
+      "País de Residencia",
+      "Siguiente"
+    ],
+    "fecha": "2026-01-20T23:00:38.005Z"
+  }
+]

@@ -1,10 +1,10 @@
 import { defineConfig, devices } from '@playwright/test';
 import path from 'node:path';
 
-console.log('✅ Cargando configuración de Playwright desde /src/configuraciones/playwright.config.ts');
+console.log('✅ Cargando configuración de Playwright desde Nueva configuración /src/configuraciones/playwright.config.ts');
 export default defineConfig({
   testDir: path.join(__dirname, '../tests'),
-  timeout: 150000,
+  timeout: 400000,
   fullyParallel: true,
   workers: 9,
   reporter: [['list'], ['html', { open: 'never', outputFolder: 'Evidencias/reportes' }]],
@@ -16,19 +16,29 @@ export default defineConfig({
     // trace: 'on-first-retry',
     // screenshot: 'only-on-failure',
     // video: 'retain-on-failure',
-    headless: false,
+
   },
   projects: [
     {
       name: 'Chromium',
       use: {
-        ...devices['Desktop Chrome'],
+        browserName: 'chromium',
+        headless: false,
+        viewport: null,
+        launchOptions: {
+          args: ['--start-maximized']
+        }
       },
     },
     {
       name: 'Firefox',
       use: {
-        ...devices['Desktop Firefox'],
+        browserName: 'firefox',
+        headless: false,
+        viewport: null,
+        launchOptions: {
+          args: ['--start-maximized']
+        }
       },
     },
   ],
