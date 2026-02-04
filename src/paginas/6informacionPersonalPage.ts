@@ -216,7 +216,7 @@ export class InformacionPersonalPage {
         const { faker } = await import("@faker-js/faker");
         const Dia = faker.number.int({ min: 1, max: 30 }).toString();
         const Mes = faker.number.int({ min: 1, max: 12 }).toString();
-        const Anio = faker.number.int({ min: 2007, max: 2026 }).toString();
+        const Anio = faker.number.int({ min: 2007, max: 2025 }).toString();
         const FechaNacimientoDependiente = `${Mes}/${Dia}/${Anio}`;
         await this.page.frameLocator('iframe#ifCotizador').locator('#datepickerBirthday').pressSequentially(FechaNacimientoDependiente);
     }

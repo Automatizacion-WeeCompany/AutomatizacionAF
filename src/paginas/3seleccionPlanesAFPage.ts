@@ -16,43 +16,90 @@ export class SeleccionarPlanesAFPage {
         await this.page.frameLocator('iframe#ifCotizador').locator('#changePlan').click();
         await this.page.frameLocator('iframe#ifCotizador').locator('label[for="Vital"]').nth(0).click();
     }
-    // async seleccionaRedProveedoresUltra() {
-    //     const selectRedProveedor = this.page.frameLocator('iframe#ifCotizador').locator('#redesDeProveedor0');
-    //     await esperarOpcionesEnSelect(selectRedProveedor, 1, 5000);
-    //     await selectRedProveedor.selectOption({ label: 'Ultra★' });
-    // }
     async seleccionaRedProveedoresUltra() {
         const iframe = this.page.frameLocator('iframe#ifCotizador');
         const select = iframe.locator('#redesDeProveedor0');
-
         // 1. Esperamos a que las opciones estén cargadas (que haya más de una)
         await expect(select.locator('option')).toHaveCount(3, { timeout: 10000 });
-
         // 2. Buscamos el VALOR de la opción que contiene "Ultra"
         // Usamos filter para encontrar la opción que coincida con el texto (aunque tenga espacios o estrellas)
         const valorUltra = await select.locator('option')
             .filter({ hasText: /Ultra/ })
             .getAttribute('value');
-
         if (valorUltra) {
             // 3. Seleccionamos por el valor encontrado
             await select.selectOption(valorUltra);
-
             // 4. Disparamos el evento para que la web procese el cambio
             await select.dispatchEvent('change');
         } else {
             throw new Error("No se encontró ninguna opción que contenga 'Ultra'");
         }
-
+        // Validación final
+        await expect(select).not.toHaveValue('');
+    }
+    async seleccionaRedProveedoresOpen() {
+        const iframe = this.page.frameLocator('iframe#ifCotizador');
+        const select = iframe.locator('#redesDeProveedor0');
+        // 1. Esperamos a que las opciones estén cargadas (que haya más de una)
+        await expect(select.locator('option')).toHaveCount(3, { timeout: 10000 });
+        // 2. Buscamos el VALOR de la opción que contiene "Ultra"
+        // Usamos filter para encontrar la opción que coincida con el texto (aunque tenga espacios o estrellas)
+        const valorOpen = await select.locator('option')
+            .filter({ hasText: /Open/ })
+            .getAttribute('value');
+        if (valorOpen) {
+            // 3. Seleccionamos por el valor encontrado
+            await select.selectOption(valorOpen);
+            // 4. Disparamos el evento para que la web procese el cambio
+            await select.dispatchEvent('change');
+        } else {
+            throw new Error("No se encontró ninguna opción que contenga 'Open'");
+        }
         // Validación final
         await expect(select).not.toHaveValue('');
     }
     async seleccionaRedProveedoresPlus() {
-        const selectRedProveedor = this.page.frameLocator('iframe#ifCotizador').locator('#redesDeProveedor0');
-        await esperarOpcionesEnSelect(selectRedProveedor, 1, 5000);
-        await selectRedProveedor.selectOption({ label: 'Plus' });
+        const iframe = this.page.frameLocator('iframe#ifCotizador');
+        const select = iframe.locator('#redesDeProveedor0');
+        // 1. Esperamos a que las opciones estén cargadas (que haya más de una)
+        await expect(select.locator('option')).toHaveCount(3, { timeout: 10000 });
+        // 2. Buscamos el VALOR de la opción que contiene "Ultra"
+        // Usamos filter para encontrar la opción que coincida con el texto (aunque tenga espacios o estrellas)
+        const valorPlus = await select.locator('option')
+            .filter({ hasText: /Plus/ })
+            .getAttribute('value');
+        if (valorPlus) {
+            // 3. Seleccionamos por el valor encontrado
+            await select.selectOption(valorPlus);
+            // 4. Disparamos el evento para que la web procese el cambio
+            await select.dispatchEvent('change');
+        } else {
+            throw new Error("No se encontró ninguna opción que contenga 'Plus'");
+        }
+        // Validación final
+        await expect(select).not.toHaveValue('');
     }
-
+    async seleccionaRedProveedoresCore() {
+        const iframe = this.page.frameLocator('iframe#ifCotizador');
+        const select = iframe.locator('#redesDeProveedor0');
+        // 1. Esperamos a que las opciones estén cargadas (que haya más de una)
+        await expect(select.locator('option')).toHaveCount(3, { timeout: 10000 });
+        // 2. Buscamos el VALOR de la opción que contiene "Ultra"
+        // Usamos filter para encontrar la opción que coincida con el texto (aunque tenga espacios o estrellas)
+        const valorCore = await select.locator('option')
+            .filter({ hasText: /Core/ })
+            .getAttribute('value');
+        if (valorCore) {
+            // 3. Seleccionamos por el valor encontrado
+            await select.selectOption(valorCore);
+            // 4. Disparamos el evento para que la web procese el cambio
+            await select.dispatchEvent('change');
+        } else {
+            throw new Error("No se encontró ninguna opción que contenga 'Core'");
+        }
+        // Validación final
+        await expect(select).not.toHaveValue('');
+    }
     async seleccionaDeducible(Deducible: string) {
         await this.page.frameLocator('iframe#ifCotizador').locator('#Deducible0').click({ delay: 1500 });
         await this.page.frameLocator('iframe#ifCotizador').locator('#Deducible0').selectOption(Deducible, { timeout: 5000 });

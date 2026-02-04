@@ -150,25 +150,42 @@ export class PasoDosPlanesFlow {
         switch (CotizarPlan) {
             case 'Superior':
                 await this.seleccionarPlanesPage.seleccionarPlanSuperior();
+                if (RedProveedores === 'Ultra') {
+                    await this.seleccionarPlanesPage.seleccionaRedProveedoresUltra();
+                }
+                else if (RedProveedores === 'Open') {
+                    await this.seleccionarPlanesPage.seleccionaRedProveedoresOpen();
+                }
+                else {
+                    throw new Error('Red de proveedores no soportada revisar archivo de datos');
+                }
                 break;
             case 'Optima':
                 await this.seleccionarPlanesPage.seleccionarPlanOptima();
+                if (RedProveedores === 'Ultra') {
+                    await this.seleccionarPlanesPage.seleccionaRedProveedoresUltra();
+                }
+                else if (RedProveedores === 'Plus') {
+                    await this.seleccionarPlanesPage.seleccionaRedProveedoresPlus();
+                }
+                else {
+                    throw new Error('Red de proveedores no soportada revisar archivo de datos');
+                }
                 break;
             case 'Vital':
                 await this.seleccionarPlanesPage.seleccionarPlanVital();
+                if (RedProveedores === 'Plus') {
+                    await this.seleccionarPlanesPage.seleccionaRedProveedoresPlus();
+                }
+                else if (RedProveedores === 'Core') {
+                    await this.seleccionarPlanesPage.seleccionaRedProveedoresCore();
+                }
+                else {
+                    throw new Error('Red de proveedores no soportada revisar archivo de datos');
+                }
                 break;
             default:
                 throw new Error('Plan no soportado revisar archivo de datos');
-        }
-        if (RedProveedores === 'Ultra') {
-            console.log('Entrando en ultra');
-            await this.seleccionarPlanesPage.seleccionaRedProveedoresUltra();
-        }
-        else if (RedProveedores === 'Plus') {
-            await this.seleccionarPlanesPage.seleccionaRedProveedoresPlus();
-        }
-        else {
-            throw new Error('Red de proveedores no soportada revisar archivo de datos');
         }
         await this.seleccionarPlanesPage.seleccionaDeducible(Deducible);
         switch (FrecuenciaPago) {
@@ -408,6 +425,7 @@ export class PasoSeisCuestionarioMedicoFlow {
             //Agrega persona pregunta 4
             await this.cuestionarioMedicoPt1Page.CheckSiP4();
             await this.cuestionarioMedicoPt1Page.ClickBtnAgregarPersonaP4();
+            await this.cuestionarioMedicoPt1Page.SeleccionarPersonaAfectadaP4();
             await this.cuestionarioMedicoPt1Page.IngresarDetallesP4();
             await this.cuestionarioMedicoPt1Page.ClickBtnAgregarP4();
             //Agregar persona pregunta 5
@@ -473,7 +491,7 @@ export class PasoSieteCuestionarioMedicoFlow {
         // 1️seguramos que el iframe esté cargado
         await frame.locator('body').waitFor({ state: 'attached', timeout: 10000 });
 
-        // 2️Texto fijo de la pantalla 2 (AJUSTA ESTE TEXTO)
+        // 2️Texto fijo de la pantalla
         const textoPantallaSeccion2 = 'Sección II';
         const pantallaSeccion2Visible = await frame
             .locator(`text=${textoPantallaSeccion2}`)

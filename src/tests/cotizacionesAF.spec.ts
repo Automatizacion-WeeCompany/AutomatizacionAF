@@ -17,7 +17,7 @@ const TestsEmision = ExtraerDatosExcel.obtenerEscenariosPorHoja('EmisionAF');
 
 test.describe('Cotizador AF', () => {
     for (const escenario of Tests.filter(test => test.EscenarioPrueba)) {
-        test(`Escenario: ${escenario.EscenarioPrueba}`, async ({ page }) => {
+        test(`Escenario: ${escenario.EscenarioPrueba} ${escenario.IdiomaCotizacion}`, async ({ page }) => {
             const inicioSesionAF = new InicioSesionAFFlow(page);
             const homeAF = new HomeAFFlow(page);
             const iniciarCotizacion = new IniciarCotizacionFlow(page);
