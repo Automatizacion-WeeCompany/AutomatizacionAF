@@ -106,7 +106,7 @@ export class DeclaracionPage {
     //     }
     // }
     async ClickBtnFirmarDibujaTuFirmaConsultor() {
-        await this.page.locator('#btnFirmar').first().click();
+        await this.page.getByRole('button', { name: 'Firmar' }).click();
     }
 
 }

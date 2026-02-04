@@ -6,7 +6,7 @@ export default defineConfig({
   testDir: path.join(__dirname, '../tests'),
   timeout: 400000,
   fullyParallel: true,
-  workers: 9,
+  workers: 1,
   reporter: [['list'], ['html', { open: 'never', outputFolder: 'Evidencias/reportes' }]],
   use: {
     baseURL: 'https://weeqp.azurewebsites.net/QP/WeeClaims',

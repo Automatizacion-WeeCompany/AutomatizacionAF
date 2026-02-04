@@ -138,24 +138,24 @@ export class CuestionarioMedicoPt2Page {
     //Captura cuestionario medico seccion 2
     //A. ¿Alguna solicitante está actualmente embarazada?
     async ClickCheckSiPA2() {
-        await this.page.frameLocator('iframe#ifCotizador').locator("#optSiExiste_20").click();
+        await this.page.frameLocator('iframe#ifCotizador').locator('label[for="optSiExiste_20"]').nth(0).click();
     }
     async ClickCheckNoPA2() {
-        await this.page.frameLocator('iframe#ifCotizador').locator("#optNoExiste_20").click();
+        await this.page.frameLocator('iframe#ifCotizador').locator('label[for="optNoExiste_20"]').nth(0).click();
     }
     //B. ¿Alguna solicitante ha estado embarazada? Indique el número de embarazos que ha tenido cualquier solicitante, incluidos partos naturales, abortos o cesáreas
     async ClickCheckSiPB2() {
-        await this.page.frameLocator('iframe#ifCotizador').locator("#optSiExiste_21").click();
+        await this.page.frameLocator('iframe#ifCotizador').locator('label[for="optSiExiste_21"]').nth(0).click();
     }
     async ClickCheckNoPB2() {
-        await this.page.frameLocator('iframe#ifCotizador').locator("#optNoExiste_21").click();
+        await this.page.frameLocator('iframe#ifCotizador').locator('label[for="optNoExiste_21"]').nth(0).click();
     }
     //C. ¿Alguna de las solicitantes ha presentado las siguientes condiciones o complicaciones? (Tratamientos de Fertilidad, Embarazo o el Parto, Múltiples embarazos, Hijos con una Enfermedad Congénita o Hereditaria)
     async ClickCheckSiPC2() {
-        await this.page.frameLocator('iframe#ifCotizador').locator("#optSiExiste_22").click();
+        await this.page.frameLocator('iframe#ifCotizador').locator('label[for="optSiExiste_22"]').nth(0).click();
     }
     async ClickCheckNoPC2() {
-        await this.page.frameLocator('iframe#ifCotizador').locator("#optNoExiste_22").click();
+        await this.page.frameLocator('iframe#ifCotizador').locator('label[for="optNoExiste_22"]').nth(0).click();
     }
     //Terminan preguntas
     async ClickBtnSiguienteSeccion2() {

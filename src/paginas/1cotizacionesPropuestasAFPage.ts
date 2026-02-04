@@ -4,7 +4,7 @@ export class CotizacionesPropuestasAFPage {
     constructor(private readonly page: Page) { }
 
     async clickBtnNuevaCotizacion() {
-        await this.page.getByRole('button', { name: /Nueva Cotización/i }).click({ timeout: 10000 });
+        await this.page.locator('#btnNuevaCotizacion').click({ timeout: 10000 });
     }
     async clickBtnLimpiar() {
         await this.page.locator('#btnLimpiar').click({ timeout: 10000 });

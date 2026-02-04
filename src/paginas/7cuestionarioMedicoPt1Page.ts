@@ -88,7 +88,7 @@ export class CuestionarioMedicoPt1Page {
         await this.page.frameLocator('iframe#ifCotizador').locator('#openModalPersonaSeguroExistente_23').click({ delay: 2000 });
     }
     async SeleccionarPersonaAfectadaP4() {
-        await this.page.frameLocator('iframe#ifCotizador').locator('#SelectQuestion_3C').focus();
+        await this.page.frameLocator('iframe#ifCotizador').locator('#SelectQuestion_3C').focus({ timeout: 3000 });
         await this.page.frameLocator('iframe#ifCotizador').locator('#SelectQuestion_3C').click();
         await esperarOpcionesEnSelect(this.page.frameLocator('iframe#ifCotizador').locator('#SelectQuestion_3C'), 1, 15000);
         await seleccionarOpcionAleatoriaDesdeLocator(this.page.frameLocator('iframe#ifCotizador').locator('#SelectQuestion_3C'));
@@ -183,7 +183,7 @@ export class CuestionarioMedicoPt1Page {
         const { faker } = await import("@faker-js/faker");
         const Dia = faker.number.int({ min: 1, max: 30 }).toString();
         const Mes = faker.number.int({ min: 1, max: 12 }).toString();
-        const Anio = faker.number.int({ min: 2000, max: 2026 }).toString();
+        const Anio = faker.number.int({ min: 2000, max: 2025 }).toString();
         const fechaConsultaMedicoTratante = `${Mes}/${Dia}/${Anio}`;
         await this.page.frameLocator('iframe#ifCotizador').locator('#idFEchaUltimaConsulta').pressSequentially(fechaConsultaMedicoTratante, { delay: 70 });
     }
