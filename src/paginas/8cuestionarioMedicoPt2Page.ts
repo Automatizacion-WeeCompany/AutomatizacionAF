@@ -1,7 +1,27 @@
-import { Page } from "@playwright/test";
+import { expect, Page } from "@playwright/test";
 
 export class CuestionarioMedicoPt2Page {
   constructor(private readonly page: Page) {}
+
+  private async abrirModalPersona(numero: number, pregunta: string) {
+    const iframe = this.page.frameLocator("iframe#ifCotizador");
+    const boton = iframe.locator(`#openModalPersonaSeguroExistente_${numero}`);
+    const selectorPersona = iframe.locator(`#SelectQuestion_${pregunta}`);
+
+    for (let intento = 1; intento <= 2; intento++) {
+      await boton.click({ timeout: 5000 });
+      try {
+        await expect(selectorPersona).toBeVisible({ timeout: 5000 });
+        return;
+      } catch {
+        if (intento === 2) {
+          throw new Error(
+            `No se abrió el modal para agregar persona en la pregunta ${pregunta}`,
+          );
+        }
+      }
+    }
+  }
 
   //A. ¿Tumores malignos o benignos o cáncer?
   async CheckSiPA() {
@@ -337,128 +357,74 @@ export class CuestionarioMedicoPt2Page {
   }
   //Se agregan los botónes para agregar persona Gyno Resendiz
   async CheckSiPAAgregarPersona() {
-    await this.page
-      .frameLocator("iframe#ifCotizador")
-      .locator("#openModalPersonaSeguroExistente_1")
-      .click();
+    await this.abrirModalPersona(1, "A");
   }
 
   async CheckSiPBAgregarPersona() {
-    await this.page
-      .frameLocator("iframe#ifCotizador")
-      .locator("#openModalPersonaSeguroExistente_2")
-      .click();
+    await this.abrirModalPersona(2, "B");
   }
 
   async CheckSiPCAgregarPersona() {
-    await this.page
-      .frameLocator("iframe#ifCotizador")
-      .locator("#openModalPersonaSeguroExistente_3")
-      .click();
+    await this.abrirModalPersona(3, "C");
   }
 
   async CheckSiPDAgregarPersona() {
-    await this.page
-      .frameLocator("iframe#ifCotizador")
-      .locator("#openModalPersonaSeguroExistente_4")
-      .click();
+    await this.abrirModalPersona(4, "D");
   }
 
   async CheckSiPEAgregarPersona() {
-    await this.page
-      .frameLocator("iframe#ifCotizador")
-      .locator("#openModalPersonaSeguroExistente_5")
-      .click();
+    await this.abrirModalPersona(5, "E");
   }
 
   async CheckSiPFAgregarPersona() {
-    await this.page
-      .frameLocator("iframe#ifCotizador")
-      .locator("#openModalPersonaSeguroExistente_6")
-      .click();
+    await this.abrirModalPersona(6, "F");
   }
 
   async CheckSiPGAgregarPersona() {
-    await this.page
-      .frameLocator("iframe#ifCotizador")
-      .locator("#openModalPersonaSeguroExistente_7")
-      .click();
+    await this.abrirModalPersona(7, "G");
   }
 
   async CheckSiPHAgregarPersona() {
-    await this.page
-      .frameLocator("iframe#ifCotizador")
-      .locator("#openModalPersonaSeguroExistente_8")
-      .click();
+    await this.abrirModalPersona(8, "H");
   }
 
   async CheckSiPIAgregarPersona() {
-    await this.page
-      .frameLocator("iframe#ifCotizador")
-      .locator("#openModalPersonaSeguroExistente_9")
-      .click();
+    await this.abrirModalPersona(9, "I");
   }
 
   async CheckSiPJAgregarPersona() {
-    await this.page
-      .frameLocator("iframe#ifCotizador")
-      .locator("#openModalPersonaSeguroExistente_10")
-      .click();
+    await this.abrirModalPersona(10, "J");
   }
 
   async CheckSiPKAgregarPersona() {
-    await this.page
-      .frameLocator("iframe#ifCotizador")
-      .locator("#openModalPersonaSeguroExistente_11")
-      .click();
+    await this.abrirModalPersona(11, "K");
   }
 
   async CheckSiPLAgregarPersona() {
-    await this.page
-      .frameLocator("iframe#ifCotizador")
-      .locator("#openModalPersonaSeguroExistente_12")
-      .click();
+    await this.abrirModalPersona(12, "L");
   }
 
   async CheckSiPMAgregarPersona() {
-    await this.page
-      .frameLocator("iframe#ifCotizador")
-      .locator("#openModalPersonaSeguroExistente_13")
-      .click();
+    await this.abrirModalPersona(13, "M");
   }
 
   async CheckSiPNAgregarPersona() {
-    await this.page
-      .frameLocator("iframe#ifCotizador")
-      .locator("#openModalPersonaSeguroExistente_14")
-      .click();
+    await this.abrirModalPersona(14, "N");
   }
 
   async CheckSiPOAgregarPersona() {
-    await this.page
-      .frameLocator("iframe#ifCotizador")
-      .locator("#openModalPersonaSeguroExistente_15")
-      .click();
+    await this.abrirModalPersona(15, "O");
   }
 
   async CheckSiPPAgregarPersona() {
-    await this.page
-      .frameLocator("iframe#ifCotizador")
-      .locator("#openModalPersonaSeguroExistente_16")
-      .click();
+    await this.abrirModalPersona(16, "P");
   }
 
   async CheckSiPQAgregarPersona() {
-    await this.page
-      .frameLocator("iframe#ifCotizador")
-      .locator("#openModalPersonaSeguroExistente_17")
-      .click();
+    await this.abrirModalPersona(17, "Q");
   }
 
   async CheckSiPRAgregarPersona() {
-    await this.page
-      .frameLocator("iframe#ifCotizador")
-      .locator("#openModalPersonaSeguroExistente_18")
-      .click();
+    await this.abrirModalPersona(18, "R");
   }
 }

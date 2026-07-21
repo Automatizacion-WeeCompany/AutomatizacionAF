@@ -1,11 +1,11 @@
-import { Page } from "@playwright/test";
+import { expect, Page } from "@playwright/test";
 import { seleccionarOpcionAleatoriaDesdeLocator } from "src/utilidades/SelectAleatoreo";
 
 export class InformacionPersonalPage {
     constructor(private readonly page: Page) { }
     async IngresaSegundoNombre() {
         await this.page.frameLocator('iframe#ifCotizador').locator('#txtNombreSegundo').waitFor({ state: 'visible', timeout: 15000 });
-        await this.page.frameLocator('iframe#ifCotizador').locator('#txtNombreSegundo').fill('Prueba Robot');
+        await this.page.frameLocator('iframe#ifCotizador').locator('#txtNombreSegundo').fill('Reveniew');
     }
     async IngresaFechaNacimiento() {
         const { faker } = await import("@faker-js/faker");
@@ -32,12 +32,12 @@ export class InformacionPersonalPage {
     }
     async IngresaEstatura() {
         const { faker } = await import("@faker-js/faker");
-        const AlturaTitular = faker.number.int({ min: 150, max: 220 }).toString();
+        const AlturaTitular = faker.number.int({ min: 150, max: 170 }).toString();
         await this.page.frameLocator('iframe#ifCotizador').locator('#Altura').evaluate((el, value) => { (el as HTMLInputElement).value = value; }, AlturaTitular.toString());
     }
     async IngresaPeso() {
         const { faker } = await import("@faker-js/faker");
-        const PesoTitular = faker.number.int({ min: 50, max: 120 }).toString();
+        const PesoTitular = faker.number.int({ min: 50, max: 85 }).toString();
         await this.page.frameLocator('iframe#ifCotizador').locator('#peso').evaluate((el, value) => { (el as HTMLInputElement).value = value; }, PesoTitular.toString());
     }
     async IngresaNumeroCelular() {
@@ -71,7 +71,10 @@ export class InformacionPersonalPage {
     }
     async SeleccionaOcupacionTitular(OcupacionTitular: string) {
         await this.page.frameLocator('iframe#ifCotizador').locator('#OcupacionSelect').click();
-        await this.page.frameLocator('iframe#ifCotizador').locator('#OcupacionSelect').selectOption(OcupacionTitular);
+        await this.page.frameLocator('iframe#ifCotizador').locator('#OcupacionSelect').selectOption(
+            { label: OcupacionTitular },
+            { timeout: 10000 }
+        );
     }
     async SeleccionaPaisCiudadaniaTitular() {
         await this.page.frameLocator('iframe#ifCotizador').locator('#CiudadaniaActualSelect').click();
@@ -79,7 +82,10 @@ export class InformacionPersonalPage {
     }
     async SeleccionaTipoIdentificacionTitular(TipoIdentificacionTitular: string) {
         await this.page.frameLocator('iframe#ifCotizador').locator('#TipoIDSelect1').click();
-        await this.page.frameLocator('iframe#ifCotizador').locator('#TipoIDSelect1').selectOption(TipoIdentificacionTitular);
+        await this.page.frameLocator('iframe#ifCotizador').locator('#TipoIDSelect1').selectOption(
+            { label: TipoIdentificacionTitular },
+            { timeout: 10000 }
+        );
     }
     async IngresaNumeroIdentificacionTitular() {
         const { faker } = await import("@faker-js/faker");
@@ -146,7 +152,10 @@ export class InformacionPersonalPage {
     }
     async SeleccionaRelacionSolicitantePrimario(RelacionSolicitantePrimario: string) {
         await this.page.frameLocator('iframe#ifCotizador').locator('#RelacionAseguradoSelectBeneficiario').click();
-        await this.page.frameLocator('iframe#ifCotizador').locator('#RelacionAseguradoSelectBeneficiario').selectOption(RelacionSolicitantePrimario);
+        await this.page.frameLocator('iframe#ifCotizador').locator('#RelacionAseguradoSelectBeneficiario').selectOption(
+            { label: RelacionSolicitantePrimario },
+            { timeout: 10000 }
+        );
     }
     async IngresaApellidoBeneficiario() {
         const { faker } = await import("@faker-js/faker");
@@ -222,9 +231,11 @@ export class InformacionPersonalPage {
     }
     async ClickCheckSexoNacerDependienteMasculino() {
         await this.page.frameLocator('iframe#ifCotizador').locator('label.checkbox-design[for="optMasculinoBenefi"]').click();
+        await expect(this.page.frameLocator('iframe#ifCotizador').locator('#optMasculinoBenefi')).toBeChecked();
     }
     async ClickCheckSexoNacerDependienteFemenino() {
         await this.page.frameLocator('iframe#ifCotizador').locator('label.checkbox-design[for="optFemeninoBenef"]').click();
+        await expect(this.page.frameLocator('iframe#ifCotizador').locator('#optFemeninoBenef')).toBeChecked();
     }
     async SeleccionaPaisNacimientoDependiente() {
         await this.page.frameLocator('iframe#ifCotizador').locator('#PaisNacimientoSelectDependiente').click();
@@ -232,12 +243,12 @@ export class InformacionPersonalPage {
     }
     async IngresaEstaturaDependiente() {
         const { faker } = await import("@faker-js/faker");
-        const AlturaDependiente = faker.number.int({ min: 150, max: 250 }).toString();
+        const AlturaDependiente = faker.number.int({ min: 150, max: 170 }).toString();
         await this.page.frameLocator('iframe#ifCotizador').locator('#AlturaDependiente').pressSequentially(AlturaDependiente);
     }
     async IngresaPesoDependiente() {
         const { faker } = await import("@faker-js/faker");
-        const PesoDependiente = faker.number.int({ min: 50, max: 150 }).toString();
+        const PesoDependiente = faker.number.int({ min: 50, max: 85 }).toString();
         await this.page.frameLocator('iframe#ifCotizador').locator('#pesoDependiente').pressSequentially(PesoDependiente);
     }
     async SeleccionaCiudadaniaDependiente() {
@@ -246,6 +257,9 @@ export class InformacionPersonalPage {
     }
     async ClickBtnGuardarHijo() {
         await this.page.frameLocator('iframe#ifCotizador').locator('#saveDatos').click();
+        await expect(
+            this.page.frameLocator('iframe#ifCotizador').locator('#ModalAddDependiente')
+        ).toBeHidden({ timeout: 10000 });
     }
     async ClickBtnCerrarModalDependiente() {
         await this.page.frameLocator('iframe#ifCotizador').locator('#unloadContent').click();
