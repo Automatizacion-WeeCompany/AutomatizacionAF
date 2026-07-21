@@ -51,13 +51,11 @@ export class SeleccionarPlanesAFPage {
     if (valorUltra) {
       // 3. Seleccionamos por el valor encontrado
       await select.selectOption(valorUltra);
-      // 4. Disparamos el evento para que la web procese el cambio
-      await select.dispatchEvent("change");
     } else {
       throw new Error("No se encontró ninguna opción que contenga 'Ultra'");
     }
     // Validación final
-    await expect(select).not.toHaveValue("");
+    await expect(select).toHaveValue(valorUltra);
   }
   async seleccionaRedProveedoresOpen() {
     const iframe = this.page.frameLocator("iframe#ifCotizador");
@@ -73,13 +71,11 @@ export class SeleccionarPlanesAFPage {
     if (valorOpen) {
       // 3. Seleccionamos por el valor encontrado
       await select.selectOption(valorOpen);
-      // 4. Disparamos el evento para que la web procese el cambio
-      await select.dispatchEvent("change");
     } else {
       throw new Error("No se encontró ninguna opción que contenga 'Open'");
     }
     // Validación final
-    await expect(select).not.toHaveValue("");
+    await expect(select).toHaveValue(valorOpen);
   }
   async seleccionaRedProveedoresPlus() {
     const iframe = this.page.frameLocator("iframe#ifCotizador");
@@ -95,13 +91,11 @@ export class SeleccionarPlanesAFPage {
     if (valorPlus) {
       // 3. Seleccionamos por el valor encontrado
       await select.selectOption(valorPlus);
-      // 4. Disparamos el evento para que la web procese el cambio
-      await select.dispatchEvent("change");
     } else {
       throw new Error("No se encontró ninguna opción que contenga 'Plus'");
     }
     // Validación final
-    await expect(select).not.toHaveValue("");
+    await expect(select).toHaveValue(valorPlus);
   }
   async seleccionaRedProveedoresCore() {
     const iframe = this.page.frameLocator("iframe#ifCotizador");
@@ -117,13 +111,11 @@ export class SeleccionarPlanesAFPage {
     if (valorCore) {
       // 3. Seleccionamos por el valor encontrado
       await select.selectOption(valorCore);
-      // 4. Disparamos el evento para que la web procese el cambio
-      await select.dispatchEvent("change");
     } else {
       throw new Error("No se encontró ninguna opción que contenga 'Core'");
     }
     // Validación final
-    await expect(select).not.toHaveValue("");
+    await expect(select).toHaveValue(valorCore);
   }
   async seleccionaDeducible(Deducible: string) {
     await this.page
@@ -158,6 +150,60 @@ export class SeleccionarPlanesAFPage {
       .frameLocator("iframe#ifCotizador")
       .locator('label[for="radioFrecuenciaAnual"]')
       .click({ delay: 1500 });
+  }
+  async asegurarConfiguracionPlan(
+    RedProveedores: string,
+    Deducible: string,
+  ) {
+    const iframe = this.page.frameLocator("iframe#ifCotizador");
+    const selectRed = iframe.locator("#redesDeProveedor0");
+    const selectDeducible = iframe.locator("#Deducible0");
+
+    const valorRed = await selectRed.locator("option").evaluateAll(
+      (opciones, textoBuscado) =>
+        opciones.find((opcion) =>
+          opcion.textContent?.trim().includes(textoBuscado),
+        )?.getAttribute("value") ?? "",
+      RedProveedores,
+    );
+    const valorDeducible = await selectDeducible.locator("option").evaluateAll(
+      (opciones, textoBuscado) =>
+        opciones.find(
+          (opcion) =>
+            opcion.getAttribute("value") === textoBuscado ||
+            opcion.textContent?.trim() === textoBuscado,
+        )?.getAttribute("value") ?? "",
+      Deducible,
+    );
+
+    if (!valorRed || !valorDeducible) {
+      throw new Error(
+        `No se encontró la configuración de plan: red "${RedProveedores}", deducible "${Deducible}"`,
+      );
+    }
+
+    for (let intento = 1; intento <= 4; intento++) {
+      if ((await selectRed.inputValue()) !== valorRed) {
+        await selectRed.selectOption(valorRed);
+      }
+      if ((await selectDeducible.inputValue()) !== valorDeducible) {
+        await selectDeducible.selectOption(valorDeducible);
+      }
+
+      // La aplicación regenera ambos selects por AJAX. Esta comprobación
+      // posterior detecta y recupera valores perdidos durante ese render.
+      await this.page.waitForTimeout(750);
+      if (
+        (await selectRed.inputValue()) === valorRed &&
+        (await selectDeducible.inputValue()) === valorDeducible
+      ) {
+        return;
+      }
+    }
+
+    throw new Error(
+      `La configuración del plan no se estabilizó. Red actual: "${await selectRed.inputValue()}", deducible actual: "${await selectDeducible.inputValue()}"`,
+    );
   }
   async clickBtnRegresar() {
     await this.page

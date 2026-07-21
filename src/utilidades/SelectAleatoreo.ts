@@ -139,10 +139,24 @@ export async function seleccionarOpcionAleatoriaDesdeLocator(
   );
 
   // 4️ Filtrar placeholders
-  const opcionesValidas = opciones.filter(o =>
+  const opcionesValidas = opciones.filter(o => {
+    const esOpcionOtro = /\b(other|others|otro|otros|otra|otras|outro|outros|outra|outras)\b/i.test(o.text);
+
+    return o.value !== '' &&
     o.text &&
-    !['Colonia', 'Sexo', 'Mes', 'Dia', 'Parentesco', 'Estado civil', 'Seleccione una opción'].includes(o.text)
-  );
+    !esOpcionOtro &&
+    ![
+      'Colonia',
+      'Sexo',
+      'Mes',
+      'Dia',
+      'Parentesco',
+      'Estado civil',
+      'Seleccione una opción',
+      'Select an option',
+      'Selecione uma opção'
+    ].includes(o.text);
+  });
 
   if (opcionesValidas.length === 0) {
     throw new Error('❌ No hay opciones válidas para seleccionar');

@@ -18,7 +18,7 @@ export class InicioCotizacionDatosPersonalesAFPage {
     }
     async ingresaEdadTitular() {
         const { faker } = await import("@faker-js/faker");
-        const EdadTitular = faker.number.int({ min: 18, max: 76 }).toString();
+        const EdadTitular = faker.number.int({ min: 18, max: 45 }).toString();
         await this.page.frameLocator('iframe#ifCotizador').locator('#datepickerBirthday').pressSequentially(EdadTitular, { delay: 70 });
     }
     async seleccionaPaisRecidenciaTitular() {

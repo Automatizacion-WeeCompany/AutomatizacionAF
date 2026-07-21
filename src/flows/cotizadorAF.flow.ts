@@ -8,11 +8,10 @@ import { ResumenCotizacionPage } from "../paginas/4resumenCotizacionPage";
 import { ResumenPlanesCotizadosPage } from "../paginas/5resumenCotizacionPage";
 import { InformacionPersonalPage } from "../paginas/6informacionPersonalPage";
 import { CuestionarioMedicoPt1Page } from "../paginas/7cuestionarioMedicoPt1Page";
-import { ValidarTextos } from "src/utilidades/ValidarTextosPagina";
-import { GeneradorDatos } from "src/utilidades/GeneradorDatos";
 import {
   validarPantallaPorIdioma,
   Idioma,
+  obtenerOpcionPorIdioma,
 } from "src/utilidades/validacionIdiomas";
 import { EscenarioExcel } from "../types/EscenarioExcel";
 import { CuestionarioMedicoPt2Page } from "@pages/8cuestionarioMedicoPt2Page";
@@ -20,6 +19,15 @@ import { ConfirmacionDePlanYPagoPage } from "../paginas/9confirmacionDePlanyPago
 import { TerminosyCondicionesPage } from "@pages/10terminosyCondicionesPage";
 import { DeclaracionPage } from "@pages/11declaracionPage";
 import { agregarPersonaPT2Page } from "@pages/agregarPersonaPT2Page";
+
+const CONFIGURACION_IDIOMAS: Record<
+  Idioma,
+  { opcion: string; textoConfirmacion: string }
+> = {
+  Esp: { opcion: "ESP", textoConfirmacion: "Bienvenido" },
+  Eng: { opcion: "ENG", textoConfirmacion: "Welcome" },
+  Port: { opcion: "PORT", textoConfirmacion: "Bem-vindo" },
+};
 
 export class InicioSesionAFFlow {
   inicioSesionAFPage: InicioSesionAFPage;
@@ -37,51 +45,29 @@ export class InicioSesionAFFlow {
     CorreoInicio: string,
     Contrasena: string,
   ) {
-    if (IdiomaCotizacion === "Esp") {
-      await this.inicioSesionAFPage.clickBtnCambioIdioma();
-      await this.page
-        .locator("a.dropdown-item-lang", { hasText: "ESP" })
-        .click();
-      const validacionTexto = "Bienvenido";
-      await expect(this.page.locator(`text=${validacionTexto}`)).toBeVisible();
-      console.log(
-        `Idioma cambiado correctamente, texto visible: ${validacionTexto}`,
-      );
-      console.log("Entrando en validacion de textos");
-      const resultadoP = await ValidarTextos.validarTextosEsperados({
-        context: this.page,
-        jsonPath: "./src/textosEsperados/TextosEsperadosInicioSesionEsp.json",
-      });
-      if (resultadoP.estado !== "Éxito") {
-        GeneradorDatos.guardarResultadoJSON(
-          resultadoP,
-          "./src/textosEsperados/textosFaltantes",
-          "TextosFaltantesInicioSesionEsp",
-        );
-      }
-    } else if (IdiomaCotizacion === "Eng") {
-      await this.inicioSesionAFPage.clickBtnCambioIdioma();
-      await this.page
-        .locator("a.dropdown-item-lang", { hasText: "ENG" })
-        .click();
-      const validacionTexto = "Welcome";
-      await expect(this.page.locator(`text=${validacionTexto}`)).toBeVisible();
-      console.log(
-        `Idioma cambiado correctamente, texto visible: ${validacionTexto}`,
-      );
-    } else if (IdiomaCotizacion === "Port") {
-      await this.inicioSesionAFPage.clickBtnCambioIdioma();
-      await this.page
-        .locator("a.dropdown-item-lang", { hasText: "PORT" })
-        .click();
-      const validacionTexto = "Bem-vindo";
-      await expect(this.page.locator(`text=${validacionTexto}`)).toBeVisible();
-      console.log(
-        `Idioma cambiado correctamente, texto visible: ${validacionTexto}`,
-      );
-    } else {
+    const idioma = IdiomaCotizacion as Idioma;
+    const configuracionIdioma = CONFIGURACION_IDIOMAS[idioma];
+
+    if (!configuracionIdioma) {
       throw new Error("Idioma no soportado revisar archivo de datos");
     }
+
+    await this.inicioSesionAFPage.clickBtnCambioIdioma();
+    await this.page
+      .locator("a.dropdown-item-lang", { hasText: configuracionIdioma.opcion })
+      .click();
+    await expect(
+      this.page.getByText(configuracionIdioma.textoConfirmacion, { exact: true }).first(),
+    ).toBeVisible();
+    console.log(
+      `Idioma cambiado correctamente, texto visible: ${configuracionIdioma.textoConfirmacion}`,
+    );
+    await validarPantallaPorIdioma({
+      page: this.page,
+      pantalla: "InicioSesion",
+      idioma,
+    });
+
     await this.inicioSesionAFPage.ingresaCorreo(CorreoInicio);
     await this.inicioSesionAFPage.ingresaContrasena(Contrasena);
     await this.inicioSesionAFPage.clickBtnIniciarSesion();
@@ -99,37 +85,12 @@ export class HomeAFFlow {
   }
 
   async homeAF(IdiomaCotizacion: string) {
-    const page = this.page;
     await this.homeAFPage.clickBtnCotizacion();
-    if (IdiomaCotizacion === "Esp") {
-      console.log("Validando textos en pantalla de cotizaciones");
-      const resultadoP = await ValidarTextos.validarTextosEsperados({
-        context: page,
-        jsonPath: "./src/textosEsperados/TextosEsperadosCotizacionesEsp.json",
-      });
-      if (resultadoP.estado !== "Éxito") {
-        GeneradorDatos.guardarResultadoJSON(
-          resultadoP,
-          "./src/textosEsperados/textosFaltantes",
-          "TextosFaltantesCotizacionesEsp",
-        );
-      }
-    }
-    // else if (IdiomaCotizacion === 'Eng') {
-    //     const resultadoP = await ValidarTextos.validarTextosEsperados({ context: page, jsonPath: './textosEsperados/textosEsperadospantallaBroker.json' });
-    //     if (resultadoP.estado !== 'Éxito') {
-    //         GeneradorDatos.guardarResultadoJSON(resultadoP, './textosEsperados/textosFaltantes', 'TextosFaltantesPropuestaDeCotizacion');
-    //     }
-    // }
-    // else if (IdiomaCotizacion === 'Port') {
-    //     const resultadoP = await ValidarTextos.validarTextosEsperados({ context: page, jsonPath: './textosEsperados/textosEsperadospantallaBroker.json' });
-    //     if (resultadoP.estado !== 'Éxito') {
-    //         GeneradorDatos.guardarResultadoJSON(resultadoP, './textosEsperados/textosFaltantes', 'TextosFaltantesPropuestaDeCotizacion');
-    //     }
-    // }
-    // else {
-    //     throw new Error('Idioma no soportado revisar archivo de datos');
-    // }
+    await validarPantallaPorIdioma({
+      page: this.page,
+      pantalla: "Cotizaciones",
+      idioma: IdiomaCotizacion as Idioma,
+    });
   }
 }
 
@@ -259,6 +220,10 @@ export class PasoDosPlanesFlow {
           "Frecuencia de pago no soportada revisar archivo de datos",
         );
     }
+    await this.seleccionarPlanesPage.asegurarConfiguracionPlan(
+      RedProveedores,
+      Deducible,
+    );
     await this.seleccionarPlanesPage.clickBtnContinuar();
   }
 }
@@ -351,7 +316,7 @@ export class PasoCincoInformacionPersonalFlow {
     if (EstadoCivil === "Casado(a)") {
       await this.informacionPersonalPage.CheckCasado();
     }
-    if (EstadoCivil === "Soltero(a)") {
+    else if (EstadoCivil === "Soltero(a)") {
       await this.informacionPersonalPage.CheckSoltero();
     } else {
       throw new Error("Estado civil no soportado revisar archivo de datos");
@@ -369,11 +334,19 @@ export class PasoCincoInformacionPersonalFlow {
     }
     await this.informacionPersonalPage.IngresaCorreoTitular();
     await this.informacionPersonalPage.SeleccionaOcupacionTitular(
-      OcupacionTitular,
+      obtenerOpcionPorIdioma(
+        "OcupacionTitular",
+        OcupacionTitular,
+        IdiomaCotizacion as Idioma,
+      ),
     );
     await this.informacionPersonalPage.SeleccionaPaisCiudadaniaTitular();
     await this.informacionPersonalPage.SeleccionaTipoIdentificacionTitular(
-      TipoIdentificacionTitular,
+      obtenerOpcionPorIdioma(
+        "TipoIdentificacionTitular",
+        TipoIdentificacionTitular,
+        IdiomaCotizacion as Idioma,
+      ),
     );
     await this.informacionPersonalPage.IngresaNumeroIdentificacionTitular();
     await this.informacionPersonalPage.SeleccionaPaisExpedicionIdTitular();
@@ -406,7 +379,11 @@ export class PasoCincoInformacionPersonalFlow {
     //Agrega y valdia informacion del beneficiario
     await this.informacionPersonalPage.ClickBtnAgregarInfoBeneficiario();
     await this.informacionPersonalPage.SeleccionaRelacionSolicitantePrimario(
-      RelacionSolicitantePrimario,
+      obtenerOpcionPorIdioma(
+        "RelacionSolicitantePrimario",
+        RelacionSolicitantePrimario,
+        IdiomaCotizacion as Idioma,
+      ),
     );
     await this.informacionPersonalPage.IngresaApellidoBeneficiario();
     await this.informacionPersonalPage.IngresaNombreBeneficiario();
@@ -416,6 +393,7 @@ export class PasoCincoInformacionPersonalFlow {
     await this.informacionPersonalPage.IngresaTelefonoBeneficiario();
     await this.informacionPersonalPage.IngresaCorreoBeneficiario();
     await this.informacionPersonalPage.ClickBtnAgregarBeneficiario();
+    await this.informacionPersonalPage.ClickBtnGuardar();
     await this.informacionPersonalPage.ClickBtnSiguiente();
   }
 
@@ -462,6 +440,12 @@ export class PasoCincoInformacionPersonalFlow {
         );
       }
 
+      await this.informacionPersonalPage.SeleccionaPaisNacimientoDependiente();
+      await this.informacionPersonalPage.IngresaEstaturaDependiente();
+      await this.informacionPersonalPage.IngresaPesoDependiente();
+      await this.informacionPersonalPage.SeleccionaCiudadaniaDependiente();
+      // Los selects de país vuelven a renderizar parte del modal y pueden
+      // limpiar el sexo; se selecciona al final para asegurar su persistencia.
       switch (sexo) {
         case "Masculino":
           await this.informacionPersonalPage.ClickCheckSexoNacerDependienteMasculino();
@@ -470,10 +454,6 @@ export class PasoCincoInformacionPersonalFlow {
           await this.informacionPersonalPage.ClickCheckSexoNacerDependienteFemenino();
           break;
       }
-      await this.informacionPersonalPage.SeleccionaPaisNacimientoDependiente();
-      await this.informacionPersonalPage.IngresaEstaturaDependiente();
-      await this.informacionPersonalPage.IngresaPesoDependiente();
-      await this.informacionPersonalPage.SeleccionaCiudadaniaDependiente();
       await this.informacionPersonalPage.ClickBtnGuardarHijo();
     }
   }
@@ -526,7 +506,13 @@ export class PasoSeisCuestionarioMedicoFlow {
       await this.cuestionarioMedicoPt1Page.ClickBtnAgregarPersonaP5();
       await this.cuestionarioMedicoPt1Page.SeleccionarPersonaAfectadaP5();
       await this.cuestionarioMedicoPt1Page.IngresarDetallesP5();
-      await this.cuestionarioMedicoPt1Page.SeleccionarsustanciaP5(P5Sustancia);
+      await this.cuestionarioMedicoPt1Page.SeleccionarsustanciaP5(
+        obtenerOpcionPorIdioma(
+          "Sustancia",
+          P5Sustancia,
+          IdiomaCotizacion as Idioma,
+        ),
+      );
       if (SigueIngiriendo === "Si") {
         await this.cuestionarioMedicoPt1Page.checkIngiriendoSi();
       } else {
@@ -759,11 +745,10 @@ export class PasoSieteCuestionarioMedicoFlow {
     // 1️seguramos que el iframe esté cargado
     await frame.locator("body").waitFor({ state: "attached", timeout: 10000 });
 
-    // 2️Texto fijo de la pantalla
-    const textoPantallaSeccion2 = "Sección II";
-    const pantallaSeccion2Visible = await frame
-      .locator(`text=${textoPantallaSeccion2}`)
-      .waitFor({ timeout: 8000 })
+    // 2️Detectar la sección opcional mediante un control estable e independiente del idioma
+    const botonSiguienteSeccion2 = frame.locator("#GostepFive");
+    const pantallaSeccion2Visible = await botonSiguienteSeccion2
+      .waitFor({ state: "visible", timeout: 8000 })
       .then(() => true)
       .catch(() => false);
     // 3️Lógica funcional
@@ -814,26 +799,9 @@ export class PasoDiezDeclaracionFlow {
     await this.declaracionPage.clickBtnSubirFirma();
     await this.declaracionPage.SubirArchivoFirma();
     await this.declaracionPage.ClickBtnGuardarFirmas();
+    await this.declaracionPage.ClickBtnGuardarDeclaracion();
     await this.declaracionPage.ClickBtnSiguienteDeclaracion();
-    //Valdiacion del modal de la firma del consultor
-    // 1. Definimos el locator (Asegúrate de incluir el frameLocator si sigue dentro del iframe)
-    const contenedorModal = this.page.locator("#modalConfirmar");
-    const textoModal = contenedorModal.getByText(
-      /Es necesario que firmes el contrato/i,
-    );
-    // 2. FORZAR ESPERA: Esperamos a que el texto esté presente en el DOM
-    // Usamos .catch(() => null) para que si no aparece después de 3s, no truene el test y simplemente siga al IF
-    await textoModal
-      .waitFor({ state: "visible", timeout: 3000 })
-      .catch(() => null);
-    // 3. AHORA SÍ revisamos la visibilidad
-    if (await textoModal.isVisible()) {
-      console.log("Modal detectado, procediendo a firmar...");
-      // Clic en el botón Firmar dentro del modal
-      await contenedorModal.locator("#btnFirmar").click();
-    } else {
-      console.log("El modal no apareció, el flujo continúa.");
-    }
+    await this.declaracionPage.ClickBtnFirmaConsultor();
     await this.declaracionPage.ClickBtnDibujaTuFirmaConsultor();
     await this.declaracionPage.DibujaFirmaConsultor();
     await this.declaracionPage.ClickBtnFirmarDibujaTuFirmaConsultor();

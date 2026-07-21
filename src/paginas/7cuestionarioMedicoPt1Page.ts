@@ -6,6 +6,37 @@ import {
 
 export class CuestionarioMedicoPt1Page {
   constructor(private readonly page: Page) {}
+
+  private async seleccionarPersonaDesdeMenu(
+    selectorBoton: string,
+    selectorOpciones: string,
+  ) {
+    const iframe = this.page.frameLocator("iframe#ifCotizador");
+    const boton = iframe.locator(selectorBoton);
+    const opciones = iframe.locator(selectorOpciones);
+
+    for (let intento = 1; intento <= 2; intento++) {
+      await boton.click({ timeout: 5000 });
+      try {
+        await opciones.first().waitFor({ state: "visible", timeout: 5000 });
+        const total = await opciones.count();
+        if (total === 0) {
+          throw new Error("No hay personas disponibles para seleccionar");
+        }
+        const randomIndex = Math.floor(Math.random() * total);
+        console.log(`Opcion seleccionada: ${randomIndex}`);
+        await opciones.nth(randomIndex).click();
+        return;
+      } catch (error) {
+        if (intento === 2) {
+          const detalle = error instanceof Error ? `: ${error.message}` : "";
+          throw new Error(
+            `No se pudo desplegar el menú de personas ${selectorBoton}${detalle}`,
+          );
+        }
+      }
+    }
+  }
   //Pregunta 1 ¿Alguno de los solicitantes es una persona políticamente expuesta?
   async CheckSiP1() {
     await this.page
@@ -57,23 +88,10 @@ export class CuestionarioMedicoPt1Page {
       .click();
   }
   async SeleccionarPersonaAleatoriaP2() {
-    // Abrir el selector
-    await this.page
-      .frameLocator("iframe#ifCotizador")
-      .locator("#getSeguroMedicoExistente")
-      .click();
-    // Obtener opciones
-    const opciones = this.page
-      .frameLocator("iframe#ifCotizador")
-      .locator(".btnActionNameUno");
-    await opciones.first().waitFor({ state: "visible" });
-    const total = await opciones.count();
-    if (total === 0) {
-      throw new Error("No hay personas disponibles para seleccionar");
-    }
-    const randomIndex = Math.floor(Math.random() * total);
-    console.log(`Opcion seleccionada: ${randomIndex}`);
-    await opciones.nth(randomIndex).click();
+    await this.seleccionarPersonaDesdeMenu(
+      "#getSeguroMedicoExistente",
+      ".btnActionNameUno",
+    );
   }
   async SubirArchivoFirmaP2() {
     await this.page
@@ -105,23 +123,10 @@ export class CuestionarioMedicoPt1Page {
       .click();
   }
   async SeleccionarPersonaAleatoriaP3() {
-    // Abrir el selector
-    await this.page
-      .frameLocator("iframe#ifCotizador")
-      .locator("#getPersonasEstatus")
-      .click();
-    // Obtener opciones
-    const opciones = this.page
-      .frameLocator("iframe#ifCotizador")
-      .locator(".btnActionNameDos");
-    await opciones.first().waitFor({ state: "visible" });
-    const total = await opciones.count();
-    if (total === 0) {
-      throw new Error("No hay personas disponibles para seleccionar");
-    }
-    const randomIndex = Math.floor(Math.random() * total);
-    console.log(`Opcion seleccionada: ${randomIndex}`);
-    await opciones.nth(randomIndex).click();
+    await this.seleccionarPersonaDesdeMenu(
+      "#getPersonasEstatus",
+      ".btnActionNameDos",
+    );
   }
   async IngresarDetallesP3() {
     const { faker } = await import("@faker-js/faker");
@@ -233,7 +238,7 @@ export class CuestionarioMedicoPt1Page {
     await this.page
       .frameLocator("iframe#ifCotizador")
       .locator("#selectSustancia_S")
-      .selectOption(Sustancia);
+      .selectOption({ label: Sustancia }, { timeout: 10000 });
   }
   async checkIngiriendoSi() {
     await this.page
@@ -281,28 +286,15 @@ export class CuestionarioMedicoPt1Page {
       .click();
   }
   async SeleccionarPersonaAleatoriaP6() {
-    // Abrir el selector
-    await this.page
-      .frameLocator("iframe#ifCotizador")
-      .locator("#getSeguroActualPersonas")
-      .click();
-    // Obtener opciones
-    const opciones = this.page
-      .frameLocator("iframe#ifCotizador")
-      .locator(".btnActionNameTres");
-    await opciones.first().waitFor({ state: "visible" });
-    const total = await opciones.count();
-    if (total === 0) {
-      throw new Error("No hay personas disponibles para seleccionar");
-    }
-    const randomIndex = Math.floor(Math.random() * total);
-    console.log(`Opcion seleccionada: ${randomIndex}`);
-    await opciones.nth(randomIndex).click();
+    await this.seleccionarPersonaDesdeMenu(
+      "#getSeguroActualPersonas",
+      ".btnActionNameTres",
+    );
   }
   async ClickbtnAgregarEspecialistaP6() {
     await this.page
       .frameLocator("iframe#ifCotizador")
-      .getByText("Agregar Especialista")
+      .locator("button.addEspecialista")
       .click();
   }
   async IngresarNombreMedicoTratante() {
