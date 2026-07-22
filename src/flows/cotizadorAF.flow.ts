@@ -18,6 +18,14 @@ import { CuestionarioMedicoPt2Page } from "@pages/8cuestionarioMedicoPt2Page";
 import { ConfirmacionDePlanYPagoPage } from "../paginas/9confirmacionDePlanyPagoPage";
 import { TerminosyCondicionesPage } from "@pages/10terminosyCondicionesPage";
 import { DeclaracionPage } from "@pages/11declaracionPage";
+import { ApliacionCompletaPage } from "@pages/12apliacionCompletaPage";
+import { RegistrarInformacionPagoPage } from "@pages/13registrarInformacionPagoPage";
+import {
+  ConfirmacionPagoPage,
+  DatosTarjetaPago,
+  MetodoPagoPage,
+  ModalSecureCheckoutPage,
+} from "@pages/14metodoPagoPage";
 import { agregarPersonaPT2Page } from "@pages/agregarPersonaPT2Page";
 
 const CONFIGURACION_IDIOMAS: Record<
@@ -802,9 +810,85 @@ export class PasoDiezDeclaracionFlow {
     await this.declaracionPage.ClickBtnGuardarDeclaracion();
     await this.declaracionPage.ClickBtnSiguienteDeclaracion();
     await this.declaracionPage.ClickBtnFirmaConsultor();
-    await this.declaracionPage.ClickBtnDibujaTuFirmaConsultor();
-    await this.declaracionPage.DibujaFirmaConsultor();
-    await this.declaracionPage.ClickBtnFirmarDibujaTuFirmaConsultor();
+    await this.declaracionPage.ClickBtnSubirFirmaConsultor();
+    await this.declaracionPage.SubirArchivoFirmaConsultor();
+    await this.declaracionPage.ClickBtnFirmarConsultor();
     await this.declaracionPage.ClickBtnSiguienteDeclaracion();
+  }
+}
+
+export class PasoOnceAplicacionCompletaFlow {
+  private readonly aplicacionCompletaPage: ApliacionCompletaPage;
+
+  constructor(page: Page) {
+    this.aplicacionCompletaPage = new ApliacionCompletaPage(page);
+  }
+
+  async CapturarAplicacionCompleta() {
+    await this.aplicacionCompletaPage.clicBtnPagarAhora();
+  }
+}
+
+export class PasoDoceRegistrarInformacionPagoFlow {
+  private readonly registrarInformacionPagoPage: RegistrarInformacionPagoPage;
+
+  constructor(page: Page) {
+    this.registrarInformacionPagoPage = new RegistrarInformacionPagoPage(page);
+  }
+
+  async CapturarInformacionPago() {
+    await this.registrarInformacionPagoPage.checkSiPersonaQuePaga();
+    await this.registrarInformacionPagoPage.clickBtnContinuar();
+  }
+}
+
+const DATOS_PAGO_SANDBOX: DatosTarjetaPago = {
+  correo: process.env.AF_PAYMENT_EMAIL || "qa.payment@yopmail.com",
+  telefono: process.env.AF_PAYMENT_PHONE || "5555550100",
+  numeroTarjeta: process.env.AF_PAYMENT_CARD || "4111111111111111",
+  mesExpiracion: process.env.AF_PAYMENT_EXPIRY_MONTH || "12",
+  anioExpiracion:
+    process.env.AF_PAYMENT_EXPIRY_YEAR || String(new Date().getFullYear() + 4),
+  codigoSeguridad: process.env.AF_PAYMENT_CVV || "123",
+  nombre: process.env.AF_PAYMENT_FIRST_NAME || "QA",
+  apellido: process.env.AF_PAYMENT_LAST_NAME || "Automation",
+  pais: process.env.AF_PAYMENT_COUNTRY || "US",
+  direccion: process.env.AF_PAYMENT_ADDRESS || "1 Market Street",
+  ciudad: process.env.AF_PAYMENT_CITY || "San Francisco",
+  estado: process.env.AF_PAYMENT_STATE || "CA",
+  codigoPostal: process.env.AF_PAYMENT_POSTAL_CODE || "94105",
+};
+
+export class PasoTreceMetodoPagoFlow {
+  private readonly metodoPagoPage: MetodoPagoPage;
+  private readonly modalSecureCheckoutPage: ModalSecureCheckoutPage;
+  private readonly confirmacionPagoPage: ConfirmacionPagoPage;
+
+  constructor(page: Page) {
+    this.metodoPagoPage = new MetodoPagoPage(page);
+    this.modalSecureCheckoutPage = new ModalSecureCheckoutPage(page);
+    this.confirmacionPagoPage = new ConfirmacionPagoPage(page);
+  }
+
+  async CapturarMetodoPago(
+    IdiomaCotizacion: string,
+    datosPago: DatosTarjetaPago = DATOS_PAGO_SANDBOX,
+  ) {
+    const idioma = IdiomaCotizacion as Idioma;
+
+    await this.metodoPagoPage.clickBtnTarjetaDeCredito();
+    await this.modalSecureCheckoutPage.IngresaCorreoElectronico(datosPago.correo);
+    await this.modalSecureCheckoutPage.IngresaNumeroTelefonico(datosPago.telefono);
+    await this.modalSecureCheckoutPage.ClickBtnContinuar();
+    await this.modalSecureCheckoutPage.IngresaDatosTarjeta(datosPago);
+    await this.modalSecureCheckoutPage.ClickBtnContinuarDatosTarjeta();
+    await this.modalSecureCheckoutPage.ClickBtnConfirmarYContinuar();
+    await this.modalSecureCheckoutPage.ClickBtnContinuarConfirmacionPago();
+
+    const confirmacion = await this.confirmacionPagoPage.validarConfirmacion(idioma);
+    console.log(
+      `Pago confirmado para ${confirmacion.nombreTitular}. Póliza: ${confirmacion.numeroPoliza}`,
+    );
+    return confirmacion;
   }
 }
