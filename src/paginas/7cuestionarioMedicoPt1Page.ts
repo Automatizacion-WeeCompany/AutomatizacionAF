@@ -1,4 +1,4 @@
-import { Page } from "@playwright/test";
+import { expect, Page } from "@playwright/test";
 import {
   esperarOpcionesEnSelect,
   seleccionarOpcionAleatoriaDesdeLocator,
@@ -165,32 +165,36 @@ export class CuestionarioMedicoPt1Page {
       .click();
   }
   async ClickBtnAgregarPersonaP4() {
-    await this.page
-      .frameLocator("iframe#ifCotizador")
-      .locator("#openModalPersonaSeguroExistente_23")
-      .click({ delay: 2000 });
+    const iframe = this.page.frameLocator("iframe#ifCotizador");
+    const botonAgregar = iframe.locator("#openModalPersonaSeguroExistente_23");
+    const selectorPersona = iframe.locator("#SelectQuestion_3C");
+
+    for (let intento = 1; intento <= 3; intento++) {
+      await botonAgregar.click();
+      const modalListo = await selectorPersona
+        .waitFor({ state: "visible", timeout: 5000 })
+        .then(() => true)
+        .catch(() => false);
+
+      if (modalListo) {
+        return;
+      }
+    }
+
+    await expect(selectorPersona).toBeVisible({ timeout: 10000 });
   }
   async SeleccionarPersonaAfectadaP4() {
-    await this.page
+    const selectorPersona = this.page
       .frameLocator("iframe#ifCotizador")
-      .locator("#SelectQuestion_3C")
-      .focus({ timeout: 3000 });
-    await this.page
-      .frameLocator("iframe#ifCotizador")
-      .locator("#SelectQuestion_3C")
-      .click();
+      .locator("#SelectQuestion_3C");
+
+    await expect(selectorPersona).toBeVisible({ timeout: 10000 });
     await esperarOpcionesEnSelect(
-      this.page
-        .frameLocator("iframe#ifCotizador")
-        .locator("#SelectQuestion_3C"),
+      selectorPersona,
       1,
       15000,
     );
-    await seleccionarOpcionAleatoriaDesdeLocator(
-      this.page
-        .frameLocator("iframe#ifCotizador")
-        .locator("#SelectQuestion_3C"),
-    );
+    await seleccionarOpcionAleatoriaDesdeLocator(selectorPersona);
   }
   async IngresarDetallesP4() {
     const { faker } = await import("@faker-js/faker");

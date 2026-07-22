@@ -194,7 +194,22 @@ export class InformacionPersonalPage {
         await this.page.frameLocator('iframe#ifCotizador').locator('#idDireccionBenef').pressSequentially(CorreoBeneficiario);
     }
     async ClickBtnAgregarBeneficiario() {
+        const guardadoBeneficiario = this.page.waitForResponse(
+            response => response.request().method() === 'POST'
+                && response.url().includes('/API/Cotizador/AddUpdateBeneficiarios'),
+            { timeout: 30000 },
+        );
+
         await this.page.frameLocator('iframe#ifCotizador').locator('#saveBeneficiario').click();
+        const respuesta = await guardadoBeneficiario;
+
+        if (!respuesta.ok()) {
+            throw new Error(`No se pudo guardar el beneficiario: HTTP ${respuesta.status()}`);
+        }
+
+        await expect(
+            this.page.frameLocator('iframe#ifCotizador').locator('#ModalAddBeneficiario')
+        ).toBeHidden({ timeout: 10000 });
     }
     async ClickBtnAgregarHijo() {
         await this.page.frameLocator('iframe#ifCotizador').locator('#openModalAddDependiente').click();
@@ -268,9 +283,36 @@ export class InformacionPersonalPage {
         await this.page.frameLocator('iframe#ifCotizador').locator('#unloadContent').click();
     }
     async ClickBtnSiguiente() {
-        await this.page.frameLocator('iframe#ifCotizador').locator('#GoNextStepOne').click();
+        const iframe = this.page.frameLocator('iframe#ifCotizador');
+        const botonSiguiente = iframe.locator('#GoNextStepOne');
+        const cuestionarioCargado = iframe.locator('#GostepTwo');
+
+        for (let intento = 1; intento <= 2; intento++) {
+            await botonSiguiente.click();
+            const avanzoAlCuestionario = await cuestionarioCargado
+                .waitFor({ state: 'visible', timeout: 15000 })
+                .then(() => true)
+                .catch(() => false);
+
+            if (avanzoAlCuestionario) {
+                return;
+            }
+        }
+
+        await expect(cuestionarioCargado).toBeVisible({ timeout: 15000 });
     }
     async ClickBtnGuardar() {
+        const guardadoTitular = this.page.waitForResponse(
+            response => response.request().method() === 'POST'
+                && response.url().includes('/API/Cotizador/AddTitularCotizador'),
+            { timeout: 30000 },
+        );
+
         await this.page.frameLocator('iframe#ifCotizador').locator('#btnGuardarProcesoPaso1').click();
+        const respuesta = await guardadoTitular;
+
+        if (!respuesta.ok()) {
+            throw new Error(`No se pudo guardar la informacion personal: HTTP ${respuesta.status()}`);
+        }
     }
 }
