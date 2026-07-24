@@ -1,4 +1,4 @@
-import { Page } from "@playwright/test";
+import { expect, Page } from "@playwright/test";
 
 export class DeclaracionPage {
     constructor(private readonly page: Page) { }
@@ -18,28 +18,127 @@ export class DeclaracionPage {
     async ClickBtnGuardarFirmas() {
         await this.page.frameLocator('iframe#ifCotizador').locator('#frmUploadSignature-saveuploadfile').click();
     }
-    async ClickBtnSiguienteDeclaracion() {
-        await this.page.frameLocator('iframe#ifCotizador').locator('#GostepNextTYC').click({ delay: 3000 });
+    async ClickBtnGuardarDeclaracion() {
+        await this.page
+            .frameLocator('iframe#ifCotizador')
+            .locator('#btnGuardarProcesoTYC')
+            .click({ timeout: 10000 });
     }
-    async ClickBtnFirmaConsultor() {
-        await this.page.frameLocator('iframe#ifCotizador').locator('#btnFirmar').click({ delay: 2000 });
+    async ClickBtnSiguienteDeclaracion() {
+        await this.page.frameLocator('iframe#ifCotizador').locator('#GostepNextTYC').click();
+    }
+    async ClickBtnFirmaConsultor(): Promise<boolean> {
+        const botonConfirmar = this.page.locator('#modalConfirmar #btnFirmar');
+        const tarjetaFirma = this.page.locator('#modalTipoFirma #divCardDrawSignature');
+
+        let procesoFirmaVisible = false;
+        for (let intento = 1; intento <= 3; intento++) {
+            procesoFirmaVisible = await expect.poll(
+                async () =>
+                    (await botonConfirmar.isVisible()) || (await tarjetaFirma.isVisible()),
+                {
+                    timeout: 10000,
+                    message: 'El modal de firma del consultor no se abrió'
+                }
+            ).toBe(true).then(() => true).catch(() => false);
+
+            if (procesoFirmaVisible) {
+                break;
+            }
+
+            const botonSiguiente = this.page
+                .frameLocator('iframe#ifCotizador')
+                .locator('#GostepNextTYC');
+            if (await botonSiguiente.isVisible()) {
+                await botonSiguiente.click();
+            }
+        }
+
+        if (!procesoFirmaVisible) {
+            throw new Error('No se abrió el proceso de firma del consultor después de reintentar');
+        }
+
+        if (await botonConfirmar.isVisible()) {
+            await botonConfirmar.click();
+        }
+        await expect(tarjetaFirma).toBeVisible({ timeout: 10000 });
+
+        return procesoFirmaVisible;
     }
     async ClickBtnSubirFirmaConsultor() {
-        await this.page.frameLocator('iframe#ifCotizador').locator('#divCardUploadSignature').click();
+        const tarjetaSubirFirma = this.page.locator(
+            '#modalTipoFirma #divCardUploadSignature'
+        );
+
+        if (await tarjetaSubirFirma.isVisible()) {
+            await tarjetaSubirFirma.click();
+            await expect(this.page.locator('#ModalCargarFirma')).toBeVisible({
+                timeout: 10000
+            });
+        }
     }
     async SubirArchivoFirmaConsultor() {
-        await this.page.frameLocator('iframe#ifCotizador').locator('#btnCargaImagenFirma').setInputFiles('./src/datos/Firma.png');
+        const archivoFirma = this.page.locator('#fiFirma');
+        await archivoFirma.setInputFiles('./src/datos/Firma.png');
+        await expect(this.page.locator('#uploadedFirma')).toHaveAttribute(
+            'src',
+            /^data:image\//,
+            { timeout: 10000 }
+        );
     }
     async ClickBtnFirmarConsultor() {
-        await this.page.frameLocator('iframe#ifCotizador').locator('#btnGuardarImagenFirma').click();
+        const respuestaFirma = this.page.waitForResponse(
+            response =>
+                response.url().includes('/Cotizador/CargarImagenFirmaConsultor') &&
+                response.request().method() === 'POST',
+            { timeout: 30000 }
+        );
+        const navegacionAplicacion = this.page.waitForEvent('framenavigated', {
+            predicate: frame => frame.url().includes('/AF/Application/'),
+            timeout: 30000,
+        });
+        const consultaFirmas = this.page.waitForResponse(
+            response =>
+                response.url().includes('/API/api/Documentos/GetPoderNotarial') &&
+                response.request().method() === 'POST',
+            { timeout: 30000 }
+        );
+
+        const botonGuardarFirma = this.page.locator('#btnGuardarImagenFirma');
+        await expect(botonGuardarFirma).toBeVisible({ timeout: 10000 });
+        await botonGuardarFirma.click();
+
+        const response = await respuestaFirma;
+        if (!response.ok()) {
+            throw new Error(`No se pudo guardar la firma del consultor: HTTP ${response.status()}`);
+        }
+
+        await navegacionAplicacion;
+        const respuestaFirmas = await consultaFirmas;
+        if (!respuestaFirmas.ok()) {
+            throw new Error(`No se pudieron consultar las firmas: HTTP ${respuestaFirmas.status()}`);
+        }
+
+        const resultadoFirmas = await respuestaFirmas.json();
+        const firmas = resultadoFirmas?.Data?.Table?.[0];
+        if (!firmas?.FirmaContratoSolicitante || !firmas?.FirmaContratoConsultor) {
+            throw new Error('La aplicacion no confirmo ambas firmas antes de continuar');
+        }
+
+        await expect(
+            this.page.frameLocator('iframe#ifCotizador').locator('#GostepNextTYC')
+        ).toBeVisible({ timeout: 30000 });
     }
     async ClickBtnDibujaTuFirmaConsultor() {
-        await this.page.locator('#divCardDrawSignature').click();
+        await this.page
+            .locator('#modalTipoFirma #divCardDrawSignature')
+            .click({ timeout: 10000 });
     }
     async DibujaFirmaConsultor() {
-        const canvas = this.page.locator('#bcPaintCanvas');
+        const canvas = this.page
+            .locator('#modalDibujarFirma #bcPaintCanvas');
 
-        // 1️⃣ Esperar a que el canvas esté visible
+        // Esperar a que el canvas esté visible
         await canvas.waitFor({ state: 'visible', timeout: 10000 });
 
         const box = await canvas.boundingBox();
@@ -47,14 +146,14 @@ export class DeclaracionPage {
             throw new Error('❌ No se pudo obtener el tamaño del canvas');
         }
 
-        // 2️⃣ Punto inicial dentro del canvas (zona segura)
+        // Punto inicial dentro del canvas (zona segura)
         const startX = box.x + box.width * 0.2;
         const startY = box.y + box.height * 0.5;
 
         await this.page.mouse.move(startX, startY);
         await this.page.mouse.down();
 
-        // 3️⃣ Trazo tipo firma (ligeramente aleatorio)
+        // Trazo tipo firma (ligeramente aleatorio)
         const movimientos = [
             { x: 80, y: -30 },
             { x: 60, y: 40 },
@@ -74,39 +173,15 @@ export class DeclaracionPage {
             });
         }
 
-        // 4️⃣ Soltar mouse
+        // Soltar mouse
         await this.page.mouse.up();
 
         console.log('Firma dibujada correctamente');
     }
-
-    // async DibujaFirmaConsultor() {
-    //     // 1. Localizamos el canvas
-    //     const canvas = this.page.locator('#bcPaintCanvas');
-    //     // 2. Obtenemos el tamaño y posición del elemento
-    //     const box = await canvas.boundingBox();
-    //     if (box) {
-    //         // Calculamos el centro o un punto inicial dentro del canvas
-    //         const startX = box.x + 50;
-    //         const startY = box.y + 50;
-    //         // 3. Iniciamos la acción de firmado
-    //         // Movemos el ratón al punto inicial
-    //         await this.page.mouse.move(startX, startY);
-    //         // Presionamos el botón izquierdo (clic sostenido)
-    //         await this.page.mouse.down();
-    //         // 4. Dibujamos moviendo el ratón a distintos puntos
-    //         // Usamos 'steps' para que el movimiento sea más fluido/humano
-    //         await this.page.mouse.move(startX + 100, startY + 20, { steps: 10 });
-    //         await this.page.mouse.move(startX + 50, startY + 100, { steps: 10 });
-    //         await this.page.mouse.move(startX + 200, startY + 80, { steps: 10 });
-    //         // 5. Soltamos el ratón para terminar la firma
-    //         await this.page.mouse.up();
-    //     } else {
-    //         throw new Error("No se pudo obtener el tamaño del canvas");
-    //     }
-    // }
     async ClickBtnFirmarDibujaTuFirmaConsultor() {
-        await this.page.getByRole('button', { name: 'Firmar' }).click();
+        await this.page
+            .locator('#modalDibujarFirma #btnFirmar')
+            .click({ timeout: 10000 });
     }
 
 }
