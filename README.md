@@ -4,7 +4,7 @@ Framework de automatización web end-to-end para los procesos de American Fideli
 
 ## Alcance actual
 
-- Cotizador AF: inicio de sesión, cotización, datos personales, selección de plan, cuestionario médico, aceptación, firma y declaración.
+- Cotizador AF: cotizaciones familiares e individuales en español e inglés, desde el inicio de sesión hasta cuestionarios médicos, aceptación y firma; valida pago o evaluación según el riesgo del caso.
 - Emisión Claims AF: inicio de sesión, búsqueda de una solicitud por folio y recorrido de las secciones de emisión.
 - Validación de textos por idioma a partir de archivos JSON.
 - Evidencias Playwright: reporte HTML, video, captura y trace según la política configurada.

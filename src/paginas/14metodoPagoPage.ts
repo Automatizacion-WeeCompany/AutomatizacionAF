@@ -78,9 +78,13 @@ export class MetodoPagoPage {
             );
         }
 
-        // CyberSource traduce el nombre accesible; la tarjeta es el primer
-        // método principal (Google Pay vive en un iframe interno).
-        const botonTarjeta = this.frameMetodosPago.locator('button').first();
+        // El orden de los métodos cambia según el idioma, pero CyberSource
+        // conserva un nombre accesible reconocible para el pago con tarjeta.
+        const botonTarjeta = this.frameMetodosPago
+            .getByRole('button', {
+                name: /Card payment|Pago con tarjeta/i,
+            })
+            .first();
         await expect(botonTarjeta).toBeVisible({ timeout: 30000 });
         await botonTarjeta.click();
 
@@ -117,7 +121,11 @@ export class ModalSecureCheckoutPage {
     private async clickContinuarEtapa() {
         const botonContinuar = this.frameCheckout.locator('button[type="submit"]:visible');
         await expect(botonContinuar).toBeVisible({ timeout: 30000 });
-        await botonContinuar.click();
+
+        // El checkout se presenta en un panel lateral dentro de dos iframes.
+        // CyberSource puede reportar el botón fuera del viewport interno aunque
+        // esté visible en pantalla, por lo que ejecutamos el click del propio DOM.
+        await botonContinuar.evaluate((boton: HTMLButtonElement) => boton.click());
     }
 
     async IngresaCorreoElectronico(correo: string) {
