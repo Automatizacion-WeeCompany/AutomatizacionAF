@@ -37,6 +37,35 @@ const CONFIGURACION_IDIOMAS: Record<
   Port: { opcion: "PORT", textoConfirmacion: "Bem-vindo" },
 };
 
+const DATOS_ANTROPOMETRICOS_EVALUACION_INDIVIDUAL = Object.freeze({
+  estaturaCm: 180,
+  pesoKg: 180,
+});
+
+type RespuestaBinaria = "Si" | "No";
+
+function normalizarRespuestaBinaria(
+  valor: string,
+  nombreColumna: string,
+): RespuestaBinaria {
+  const valorNormalizado = String(valor ?? "")
+    .trim()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+
+  if (valorNormalizado === "si") {
+    return "Si";
+  }
+  if (valorNormalizado === "no") {
+    return "No";
+  }
+
+  throw new Error(
+    `${nombreColumna} debe contener Si o No. Valor recibido: "${valor}"`,
+  );
+}
+
 export class InicioSesionAFFlow {
   inicioSesionAFPage: InicioSesionAFPage;
 
@@ -128,27 +157,48 @@ export class PasoUnoDatosPersonalesFlow {
   }
   async CapturaDatosPersonales(
     TipoPoliza: string,
-    ConyugePareja: string,
+    ConyugePareja: string | undefined,
     HijosMenoresDe24: string,
   ) {
     await this.CapturaDatosPersonalesPage.ingresaNombretitular();
     await this.CapturaDatosPersonalesPage.ingresaApellidoTitular();
-    await this.CapturaDatosPersonalesPage.ingresaEdadTitular();
+    const edadTitular =
+      await this.CapturaDatosPersonalesPage.ingresaEdadTitular();
     await this.CapturaDatosPersonalesPage.seleccionaPaisRecidenciaTitular();
-    if (TipoPoliza === "Familiar") {
-      await this.CapturaDatosPersonalesPage.seleccionaTipoPolizaFamiliar();
-      if (ConyugePareja === "Si") {
-        await this.CapturaDatosPersonalesPage.checkConyugeParejaSi();
-      }
-      if (ConyugePareja === "No") {
-        await this.CapturaDatosPersonalesPage.checkConyugeParejaNo();
-      }
-      await this.CapturaDatosPersonalesPage.ingresaEdadDependiente();
-      await this.CapturaDatosPersonalesPage.seleccionaNumeroHijosMenoresDe24(
-        HijosMenoresDe24,
-      );
+
+    switch (TipoPoliza) {
+      case "Familiar":
+        await this.CapturaDatosPersonalesPage.seleccionaTipoPolizaFamiliar();
+        if (ConyugePareja === "Si") {
+          await this.CapturaDatosPersonalesPage.checkConyugeParejaSi();
+        } else if (ConyugePareja === "No") {
+          await this.CapturaDatosPersonalesPage.checkConyugeParejaNo();
+        } else {
+          throw new Error(
+            "ConyugePareja debe ser Si o No para una póliza Familiar",
+          );
+        }
+        if (!HijosMenoresDe24) {
+          throw new Error(
+            "HijosMenoresDe24 es obligatorio para una póliza Familiar",
+          );
+        }
+        await this.CapturaDatosPersonalesPage.ingresaEdadDependiente();
+        await this.CapturaDatosPersonalesPage.seleccionaNumeroHijosMenoresDe24(
+          HijosMenoresDe24,
+        );
+        break;
+      case "Individual":
+        await this.CapturaDatosPersonalesPage.seleccionaTipoPolizaIndividual();
+        break;
+      default:
+        throw new Error(
+          `Tipo de póliza no soportado: ${TipoPoliza}. Use Familiar o Individual`,
+        );
     }
+
     await this.CapturaDatosPersonalesPage.clickBtnContinuar();
+    return edadTitular;
   }
 }
 
@@ -280,7 +330,7 @@ export class PasoCincoInformacionPersonalFlow {
     this.informacionPersonalPage = new InformacionPersonalPage(this.page);
   }
 
-  async informacionPersonal(escenario: EscenarioExcel) {
+  async informacionPersonal(escenario: EscenarioExcel, edadTitular: number) {
     const {
       IdiomaCotizacion,
       SexoAlNacer,
@@ -309,28 +359,17 @@ export class PasoCincoInformacionPersonalFlow {
       idioma: IdiomaCotizacion as Idioma,
     });
     await this.informacionPersonalPage.IngresaSegundoNombre();
-    await this.informacionPersonalPage.IngresaFechaNacimiento();
-    switch (SexoAlNacer) {
-      case "Masculino":
-        await this.informacionPersonalPage.CheckSexoMasculino();
-        break;
-      case "Femenino":
-        await this.informacionPersonalPage.CheckSexoFemenino();
-        break;
-      default:
-        throw new Error("Sexo al nacer no soportado revisar archivo de datos");
-    }
     await this.informacionPersonalPage.SeleccionaPaisNacimiento();
-    if (EstadoCivil === "Casado(a)") {
-      await this.informacionPersonalPage.CheckCasado();
-    }
-    else if (EstadoCivil === "Soltero(a)") {
-      await this.informacionPersonalPage.CheckSoltero();
-    } else {
-      throw new Error("Estado civil no soportado revisar archivo de datos");
-    }
-    await this.informacionPersonalPage.IngresaEstatura();
-    await this.informacionPersonalPage.IngresaPeso();
+    const datosAntropometricos =
+      escenario.TipoPoliza === "Individual"
+        ? DATOS_ANTROPOMETRICOS_EVALUACION_INDIVIDUAL
+        : undefined;
+    await this.informacionPersonalPage.IngresaEstatura(
+      datosAntropometricos?.estaturaCm,
+    );
+    await this.informacionPersonalPage.IngresaPeso(
+      datosAntropometricos?.pesoKg,
+    );
     await this.informacionPersonalPage.SeleccionaPaisTelefono();
     await this.informacionPersonalPage.IngresaNumeroCelular();
     if (TelefonoSecundario === "Si") {
@@ -374,16 +413,22 @@ export class PasoCincoInformacionPersonalFlow {
     if (EliminarDirCorr === "Si") {
       await this.informacionPersonalPage.ClickBtnEliminarDireccionDeCorrespondencia();
     }
-    //Agreaga y valida la informacion de los beneficiarios y conyuge
-    const hijos = [Hijo1, Hijo2, Hijo3, Hijo4, Hijo5].filter(Boolean);
-    const sexos = [
-      SexoDependiente1,
-      SexoDependiente2,
-      SexoDependiente3,
-      SexoDependiente4,
-      SexoDependiente5,
-    ].filter(Boolean);
-    await this.procesarBeneficiarios(hijos, sexos);
+    const dependientes = [
+      { relacion: Hijo1, sexo: SexoDependiente1 },
+      { relacion: Hijo2, sexo: SexoDependiente2 },
+      { relacion: Hijo3, sexo: SexoDependiente3 },
+      { relacion: Hijo4, sexo: SexoDependiente4 },
+      { relacion: Hijo5, sexo: SexoDependiente5 },
+    ].filter(({ relacion, sexo }) => relacion || sexo);
+
+    if (escenario.TipoPoliza === "Individual" && dependientes.length > 0) {
+      throw new Error(
+        "Una póliza Individual no debe incluir hijos ni dependientes en el Excel",
+      );
+    }
+    if (escenario.TipoPoliza === "Familiar") {
+      await this.procesarDependientes(dependientes);
+    }
     //Agrega y valdia informacion del beneficiario
     await this.informacionPersonalPage.ClickBtnAgregarInfoBeneficiario();
     await this.informacionPersonalPage.SeleccionaRelacionSolicitantePrimario(
@@ -401,11 +446,45 @@ export class PasoCincoInformacionPersonalFlow {
     await this.informacionPersonalPage.IngresaTelefonoBeneficiario();
     await this.informacionPersonalPage.IngresaCorreoBeneficiario();
     await this.informacionPersonalPage.ClickBtnAgregarBeneficiario();
+    await this.capturarDatosDemograficos(
+      edadTitular,
+      SexoAlNacer,
+      EstadoCivil,
+    );
     await this.informacionPersonalPage.ClickBtnGuardar();
     await this.informacionPersonalPage.ClickBtnSiguiente();
   }
 
-  private async procesarBeneficiarios(hijos: string[], sexos: string[]) {
+  private async capturarDatosDemograficos(
+    edadTitular: number,
+    sexoAlNacer: string,
+    estadoCivil: string,
+  ) {
+    await this.informacionPersonalPage.IngresaFechaNacimiento(edadTitular);
+
+    if (sexoAlNacer === "Masculino") {
+      await this.informacionPersonalPage.CheckSexoMasculino();
+    } else if (sexoAlNacer === "Femenino") {
+      await this.informacionPersonalPage.CheckSexoFemenino();
+    } else {
+      throw new Error("Sexo al nacer no soportado revisar archivo de datos");
+    }
+
+    if (estadoCivil === "Casado(a)") {
+      await this.informacionPersonalPage.CheckCasado();
+    } else if (estadoCivil === "Soltero(a)") {
+      await this.informacionPersonalPage.CheckSoltero();
+    } else {
+      throw new Error("Estado civil no soportado revisar archivo de datos");
+    }
+  }
+
+  private async procesarDependientes(
+    dependientes: Array<{
+      relacion: string | undefined;
+      sexo: string | undefined;
+    }>,
+  ) {
     const hijosValidos = new Set([
       "Hijo Biológico",
       "Hijastro",
@@ -414,11 +493,10 @@ export class PasoCincoInformacionPersonalFlow {
     ]);
     const sexosValidos = new Set(["Masculino", "Femenino"]);
 
-    for (let i = 0; i < hijos.length; i++) {
-      const hijo = hijos[i];
-      const sexo = sexos[i]; // alineado con el hijo
+    for (let i = 0; i < dependientes.length; i++) {
+      const { relacion: hijo, sexo } = dependientes[i];
 
-      if (!hijosValidos.has(hijo)) {
+      if (!hijo || !hijosValidos.has(hijo)) {
         throw new Error(`Beneficiario no soportado: ${hijo}`);
       }
 
@@ -479,67 +557,92 @@ export class PasoSeisCuestionarioMedicoFlow {
     P5Sustancia: string,
     SigueIngiriendo: string,
   ) {
-    if (CapturaCuestionarioMedico === "No") {
-      await this.cuestionarioMedicoPt1Page.CheckNoP1();
-      await this.cuestionarioMedicoPt1Page.CheckNoP2();
-      await this.cuestionarioMedicoPt1Page.CheckNoP3();
-      await this.cuestionarioMedicoPt1Page.CheckNoP4();
-      await this.cuestionarioMedicoPt1Page.CheckNoP5();
-      await this.cuestionarioMedicoPt1Page.CheckNoP6();
-    }
-    if (CapturaCuestionarioMedico === "Si") {
-      //Agrega persona pregunta 1
-      await this.cuestionarioMedicoPt1Page.CheckSiP1();
-      await this.cuestionarioMedicoPt1Page.ClickBtnAgregarPersonaP1();
-      await this.cuestionarioMedicoPt1Page.SeleccionaPersonaAfectadaP1();
-      await this.cuestionarioMedicoPt1Page.ClickBtnAgregarP1();
-      //Agrega persona pregunta 2
-      await this.cuestionarioMedicoPt1Page.CheckSiP2();
-      await this.cuestionarioMedicoPt1Page.SeleccionarPersonaAleatoriaP2();
-      await this.cuestionarioMedicoPt1Page.SubirArchivoFirmaP2();
-      await this.cuestionarioMedicoPt1Page.ClickBtnGuardarP2();
-      //Agrega persona pregunta 3
-      await this.cuestionarioMedicoPt1Page.CheckSiP3();
-      await this.cuestionarioMedicoPt1Page.SeleccionarPersonaAleatoriaP3();
-      await this.cuestionarioMedicoPt1Page.IngresarDetallesP3();
-      await this.cuestionarioMedicoPt1Page.ClickBtnGuardarP3();
-      //Agrega persona pregunta 4
-      await this.cuestionarioMedicoPt1Page.CheckSiP4();
-      await this.cuestionarioMedicoPt1Page.ClickBtnAgregarPersonaP4();
-      await this.cuestionarioMedicoPt1Page.SeleccionarPersonaAfectadaP4();
-      await this.cuestionarioMedicoPt1Page.IngresarDetallesP4();
-      await this.cuestionarioMedicoPt1Page.ClickBtnAgregarP4();
-      //Agregar persona pregunta 5
-      await this.cuestionarioMedicoPt1Page.CheckSiP5();
-      await this.cuestionarioMedicoPt1Page.ClickBtnAgregarPersonaP5();
-      await this.cuestionarioMedicoPt1Page.SeleccionarPersonaAfectadaP5();
-      await this.cuestionarioMedicoPt1Page.IngresarDetallesP5();
-      await this.cuestionarioMedicoPt1Page.SeleccionarsustanciaP5(
-        obtenerOpcionPorIdioma(
-          "Sustancia",
-          P5Sustancia,
-          IdiomaCotizacion as Idioma,
-        ),
+    const respuestaCuestionario = normalizarRespuestaBinaria(
+      CapturaCuestionarioMedico,
+      "CuestionarioMedicoCaptura",
+    );
+    console.log(`Cuestionario médico I configurado en: ${respuestaCuestionario}`);
+
+    if (respuestaCuestionario === "No") {
+      await this.capturarRespuestasNegativas();
+    } else {
+      await this.capturarRespuestasAfirmativas(
+        IdiomaCotizacion,
+        P5Sustancia,
+        SigueIngiriendo,
       );
-      if (SigueIngiriendo === "Si") {
-        await this.cuestionarioMedicoPt1Page.checkIngiriendoSi();
-      } else {
-        await this.cuestionarioMedicoPt1Page.checkIngiriendoNo();
-      }
-      await this.cuestionarioMedicoPt1Page.ClickBtnAgregarP5();
-      //Agregar persona pregunta 6
-      await this.cuestionarioMedicoPt1Page.CheckSiP6();
-      await this.cuestionarioMedicoPt1Page.SeleccionarPersonaAleatoriaP6();
-      await this.cuestionarioMedicoPt1Page.ClickbtnAgregarEspecialistaP6();
-      await this.cuestionarioMedicoPt1Page.IngresarNombreMedicoTratante();
-      await this.cuestionarioMedicoPt1Page.IngresaNumeroTelefonoMedicoTratante();
-      await this.cuestionarioMedicoPt1Page.SeleccionarEspecialidadMedicoTratante();
-      await this.cuestionarioMedicoPt1Page.IngresaMotivoConsultaMedicoTratante();
-      await this.cuestionarioMedicoPt1Page.IngresaFechaConsultaMedicoTratante();
-      await this.cuestionarioMedicoPt1Page.IngresaDescripcionMedicoTratante();
-      await this.cuestionarioMedicoPt1Page.ClickBtnGuardarMedicoTratante();
     }
+
     await this.cuestionarioMedicoPt1Page.ClickBtnSiguiente();
+  }
+
+  private async capturarRespuestasNegativas() {
+    await this.cuestionarioMedicoPt1Page.CheckNoP1();
+    await this.cuestionarioMedicoPt1Page.CheckNoP2();
+    await this.cuestionarioMedicoPt1Page.CheckNoP3();
+    await this.cuestionarioMedicoPt1Page.CheckNoP4();
+    await this.cuestionarioMedicoPt1Page.CheckNoP5();
+    await this.cuestionarioMedicoPt1Page.CheckNoP6();
+  }
+
+  private async capturarRespuestasAfirmativas(
+    idiomaCotizacion: string,
+    sustancia: string,
+    sigueIngiriendo: string,
+  ) {
+    await this.cuestionarioMedicoPt1Page.CheckSiP1();
+    await this.cuestionarioMedicoPt1Page.ClickBtnAgregarPersonaP1();
+    await this.cuestionarioMedicoPt1Page.SeleccionaPersonaAfectadaP1();
+    await this.cuestionarioMedicoPt1Page.ClickBtnAgregarP1();
+
+    await this.cuestionarioMedicoPt1Page.CheckSiP2();
+    await this.cuestionarioMedicoPt1Page.SeleccionarPersonaAleatoriaP2();
+    await this.cuestionarioMedicoPt1Page.SubirArchivoFirmaP2();
+    await this.cuestionarioMedicoPt1Page.ClickBtnGuardarP2();
+
+    await this.cuestionarioMedicoPt1Page.CheckSiP3();
+    await this.cuestionarioMedicoPt1Page.SeleccionarPersonaAleatoriaP3();
+    await this.cuestionarioMedicoPt1Page.IngresarDetallesP3();
+    await this.cuestionarioMedicoPt1Page.ClickBtnGuardarP3();
+
+    await this.cuestionarioMedicoPt1Page.CheckSiP4();
+    await this.cuestionarioMedicoPt1Page.ClickBtnAgregarPersonaP4();
+    await this.cuestionarioMedicoPt1Page.SeleccionarPersonaAfectadaP4();
+    await this.cuestionarioMedicoPt1Page.IngresarDetallesP4();
+    await this.cuestionarioMedicoPt1Page.ClickBtnAgregarP4();
+
+    await this.cuestionarioMedicoPt1Page.CheckSiP5();
+    await this.cuestionarioMedicoPt1Page.ClickBtnAgregarPersonaP5();
+    await this.cuestionarioMedicoPt1Page.SeleccionarPersonaAfectadaP5();
+    await this.cuestionarioMedicoPt1Page.IngresarDetallesP5();
+    await this.cuestionarioMedicoPt1Page.SeleccionarsustanciaP5(
+      obtenerOpcionPorIdioma(
+        "Sustancia",
+        sustancia,
+        idiomaCotizacion as Idioma,
+      ),
+    );
+    const respuestaIngesta = normalizarRespuestaBinaria(
+      sigueIngiriendo,
+      "SigueIngiriendo",
+    );
+    if (respuestaIngesta === "Si") {
+      await this.cuestionarioMedicoPt1Page.checkIngiriendoSi();
+    } else {
+      await this.cuestionarioMedicoPt1Page.checkIngiriendoNo();
+    }
+    await this.cuestionarioMedicoPt1Page.ClickBtnAgregarP5();
+
+    await this.cuestionarioMedicoPt1Page.CheckSiP6();
+    await this.cuestionarioMedicoPt1Page.SeleccionarPersonaAleatoriaP6();
+    await this.cuestionarioMedicoPt1Page.ClickbtnAgregarEspecialistaP6();
+    await this.cuestionarioMedicoPt1Page.IngresarNombreMedicoTratante();
+    await this.cuestionarioMedicoPt1Page.IngresaNumeroTelefonoMedicoTratante();
+    await this.cuestionarioMedicoPt1Page.SeleccionarEspecialidadMedicoTratante();
+    await this.cuestionarioMedicoPt1Page.IngresaMotivoConsultaMedicoTratante();
+    await this.cuestionarioMedicoPt1Page.IngresaFechaConsultaMedicoTratante();
+    await this.cuestionarioMedicoPt1Page.IngresaDescripcionMedicoTratante();
+    await this.cuestionarioMedicoPt1Page.ClickBtnGuardarMedicoTratante();
   }
 }
 
@@ -556,26 +659,15 @@ export class PasoSieteCuestionarioMedicoFlow {
     IdiomaCotizacion: string,
     CapturaCuestionarioMedico: string,
   ) {
-    if (CapturaCuestionarioMedico === "No") {
-      await this.cuestionarioMedicoPt2Page.CheckNoPA();
-      await this.cuestionarioMedicoPt2Page.CheckNoPB();
-      await this.cuestionarioMedicoPt2Page.CheckNoPC();
-      await this.cuestionarioMedicoPt2Page.CheckNoPD();
-      await this.cuestionarioMedicoPt2Page.CheckNoPE();
-      await this.cuestionarioMedicoPt2Page.CheckNoPF();
-      await this.cuestionarioMedicoPt2Page.CheckNoPG();
-      await this.cuestionarioMedicoPt2Page.CheckNoPH();
-      await this.cuestionarioMedicoPt2Page.CheckNoPI();
-      await this.cuestionarioMedicoPt2Page.CheckNoPJ();
-      await this.cuestionarioMedicoPt2Page.CheckNoPK();
-      await this.cuestionarioMedicoPt2Page.CheckNoPL();
-      await this.cuestionarioMedicoPt2Page.CheckNoPM();
-      await this.cuestionarioMedicoPt2Page.CheckNoPN();
-      await this.cuestionarioMedicoPt2Page.CheckNoPO();
-      await this.cuestionarioMedicoPt2Page.CheckNoPP();
-      await this.cuestionarioMedicoPt2Page.CheckNoPQ();
-      await this.cuestionarioMedicoPt2Page.CheckNoPR();
-    } else if (CapturaCuestionarioMedico === "Si") {
+    const respuestaCuestionario = normalizarRespuestaBinaria(
+      CapturaCuestionarioMedico,
+      "CapturaPreguntasPt2",
+    );
+    console.log(`Cuestionario médico II configurado en: ${respuestaCuestionario}`);
+
+    if (respuestaCuestionario === "No") {
+      await this.cuestionarioMedicoPt2Page.SeleccionarTodasLasRespuestasNo();
+    } else {
       await this.cuestionarioMedicoPt2Page.CheckSiPA();
       await this.cuestionarioMedicoPt2Page.CheckSiPAAgregarPersona();
       await this.agregarPersonaPT2Page.SiEligePersonaAfectadaPA();
@@ -748,19 +840,10 @@ export class PasoSieteCuestionarioMedicoFlow {
       await this.agregarPersonaPT2Page.BtnAgregarPR();
     }
     await this.cuestionarioMedicoPt2Page.ClickBtnSiguiente();
-    //Valida el cuestionatrio Parte II
-    const frame = this.page.frameLocator("iframe#ifCotizador");
-    // 1️seguramos que el iframe esté cargado
-    await frame.locator("body").waitFor({ state: "attached", timeout: 10000 });
+    const destino =
+      await this.cuestionarioMedicoPt2Page.esperarDestinoDespuesDelCuestionario();
 
-    // 2️Detectar la sección opcional mediante un control estable e independiente del idioma
-    const botonSiguienteSeccion2 = frame.locator("#GostepFive");
-    const pantallaSeccion2Visible = await botonSiguienteSeccion2
-      .waitFor({ state: "visible", timeout: 8000 })
-      .then(() => true)
-      .catch(() => false);
-    // 3️Lógica funcional
-    if (pantallaSeccion2Visible) {
+    if (destino === "SeccionAdicional") {
       console.log("Sección 2 del cuestionario médico detectada");
       await this.cuestionarioMedicoPt2Page.ClickCheckNoPA2();
       await this.cuestionarioMedicoPt2Page.ClickCheckNoPB2();
@@ -826,6 +909,10 @@ export class PasoOnceAplicacionCompletaFlow {
 
   async CapturarAplicacionCompleta() {
     await this.aplicacionCompletaPage.clicBtnPagarAhora();
+  }
+
+  async ValidarAplicacionEnEvaluacion(idioma: Idioma) {
+    return this.aplicacionCompletaPage.validarCotizacionEnEvaluacion(idioma);
   }
 }
 

@@ -7,6 +7,16 @@ import {
 export class CuestionarioMedicoPt1Page {
   constructor(private readonly page: Page) {}
 
+  private async seleccionarRespuesta(idOpcion: string) {
+    const iframe = this.page.frameLocator("iframe#ifCotizador");
+    const opcion = iframe.locator(`#${idOpcion}`);
+    const etiqueta = iframe.locator(`label[for="${idOpcion}"]`).first();
+
+    await expect(etiqueta).toBeVisible({ timeout: 30000 });
+    await etiqueta.click();
+    await expect(opcion).toBeChecked();
+  }
+
   private async seleccionarPersonaDesdeMenu(
     selectorBoton: string,
     selectorOpciones: string,
@@ -39,18 +49,10 @@ export class CuestionarioMedicoPt1Page {
   }
   //Pregunta 1 ¿Alguno de los solicitantes es una persona políticamente expuesta?
   async CheckSiP1() {
-    await this.page
-      .frameLocator("iframe#ifCotizador")
-      .locator('label[for="optSiExiste_24"]')
-      .nth(0)
-      .click();
+    await this.seleccionarRespuesta("optSiExiste_24");
   }
   async CheckNoP1() {
-    await this.page
-      .frameLocator("iframe#ifCotizador")
-      .locator('label[for="optNoExiste_24"]')
-      .nth(0)
-      .click();
+    await this.seleccionarRespuesta("optNoExiste_24");
   }
   async ClickBtnAgregarPersonaP1() {
     await this.page
@@ -74,18 +76,10 @@ export class CuestionarioMedicoPt1Page {
 
   // Pregunta 2 ¿Alguno de los solicitantes tiene alguna cobertura médica previa o existente?
   async CheckSiP2() {
-    await this.page
-      .frameLocator("iframe#ifCotizador")
-      .locator('label[for="optSiExiste"]')
-      .nth(0)
-      .click();
+    await this.seleccionarRespuesta("optSiExiste");
   }
   async CheckNoP2() {
-    await this.page
-      .frameLocator("iframe#ifCotizador")
-      .locator('label[for="optNoExiste"]')
-      .nth(0)
-      .click();
+    await this.seleccionarRespuesta("optNoExiste");
   }
   async SeleccionarPersonaAleatoriaP2() {
     await this.seleccionarPersonaDesdeMenu(
@@ -109,18 +103,10 @@ export class CuestionarioMedicoPt1Page {
 
   // Pregunta 3 ¿Alguno de los solicitantes ha sido rechazado al aplicar a un seguro de vida o salud previamente, o se le ha aplicado una prima mayor a la estándar, o se le ha aplicado restricciones a su cobertura?
   async CheckSiP3() {
-    await this.page
-      .frameLocator("iframe#ifCotizador")
-      .locator('label[for="optSiEstatus"]')
-      .nth(0)
-      .click();
+    await this.seleccionarRespuesta("optSiEstatus");
   }
   async CheckNoP3() {
-    await this.page
-      .frameLocator("iframe#ifCotizador")
-      .locator('label[for="optNoEstatus"]')
-      .nth(0)
-      .click();
+    await this.seleccionarRespuesta("optNoEstatus");
   }
   async SeleccionarPersonaAleatoriaP3() {
     await this.seleccionarPersonaDesdeMenu(
@@ -146,23 +132,10 @@ export class CuestionarioMedicoPt1Page {
 
   //Pregunta 4 ¿Usted o alguno de los otros solicitantes tiene antecedentes familiares de diabetes, hipertensión, enfermedades cardíacas, cáncer, enfermedades congénitas o hereditarias?
   async CheckSiP4() {
-    await this.page
-      .frameLocator("iframe#ifCotizador")
-      .locator('label[for="optSiExiste_23"]')
-      .nth(0)
-      .waitFor({ state: "visible", timeout: 15000 });
-    await this.page
-      .frameLocator("iframe#ifCotizador")
-      .locator('label[for="optSiExiste_23"]')
-      .nth(0)
-      .click();
+    await this.seleccionarRespuesta("optSiExiste_23");
   }
   async CheckNoP4() {
-    await this.page
-      .frameLocator("iframe#ifCotizador")
-      .locator('label[for="optNoExiste_23"]')
-      .nth(0)
-      .click();
+    await this.seleccionarRespuesta("optNoExiste_23");
   }
   async ClickBtnAgregarPersonaP4() {
     const iframe = this.page.frameLocator("iframe#ifCotizador");
@@ -214,18 +187,10 @@ export class CuestionarioMedicoPt1Page {
 
   //Pregunta 5 ¿Usted o alguno de los otros solicitantes ha consumido alguna vez lo siguiente, Productos de nicotina, Alcohol, Drogas Ilegales?
   async CheckSiP5() {
-    await this.page
-      .frameLocator("iframe#ifCotizador")
-      .locator('label[for="optSiExiste_19"]')
-      .nth(0)
-      .click();
+    await this.seleccionarRespuesta("optSiExiste_19");
   }
   async CheckNoP5() {
-    await this.page
-      .frameLocator("iframe#ifCotizador")
-      .locator('label[for="optNoExiste_19"]')
-      .nth(0)
-      .click();
+    await this.seleccionarRespuesta("optNoExiste_19");
   }
   async ClickBtnAgregarPersonaP5() {
     await this.page
@@ -245,18 +210,10 @@ export class CuestionarioMedicoPt1Page {
       .selectOption({ label: Sustancia }, { timeout: 10000 });
   }
   async checkIngiriendoSi() {
-    await this.page
-      .frameLocator("iframe#ifCotizador")
-      .locator('label[for="preguntaIngiereSi"]')
-      .nth(0)
-      .click();
+    await this.seleccionarRespuesta("preguntaIngiereSi");
   }
   async checkIngiriendoNo() {
-    await this.page
-      .frameLocator("iframe#ifCotizador")
-      .locator('label[for="preguntaIngiereNo"]')
-      .nth(0)
-      .click();
+    await this.seleccionarRespuesta("preguntaIngiereNo");
   }
   async IngresarDetallesP5() {
     const { faker } = await import("@faker-js/faker");
@@ -276,18 +233,10 @@ export class CuestionarioMedicoPt1Page {
 
   //Pregunta 6 ¿Usted o alguno de los otros solicitantes tiene actualmente un médico tratante o ha consultado a un especialista en los últimos 2 años?
   async CheckSiP6() {
-    await this.page
-      .frameLocator("iframe#ifCotizador")
-      .locator('label[for="optSiTiene"]')
-      .nth(0)
-      .click();
+    await this.seleccionarRespuesta("optSiTiene");
   }
   async CheckNoP6() {
-    await this.page
-      .frameLocator("iframe#ifCotizador")
-      .locator('label[for="optNoTiene"]')
-      .nth(0)
-      .click();
+    await this.seleccionarRespuesta("optNoTiene");
   }
   async SeleccionarPersonaAleatoriaP6() {
     await this.seleccionarPersonaDesdeMenu(
@@ -367,11 +316,11 @@ export class CuestionarioMedicoPt1Page {
   }
   //Finalizan preguntas
   async ClickBtnSiguiente() {
-    await this.page.waitForTimeout(3000);
-    await this.page
-      .frameLocator("iframe#ifCotizador")
-      .locator("#GostepTwo")
-      .click();
+    const iframe = this.page.frameLocator("iframe#ifCotizador");
+    await iframe.locator("#GostepTwo").click();
+    await expect(
+      iframe.locator('label[for="optNoExiste_1"]').nth(0),
+    ).toBeVisible({ timeout: 30000 });
   }
   async ClickBtnregresar() {
     await this.page

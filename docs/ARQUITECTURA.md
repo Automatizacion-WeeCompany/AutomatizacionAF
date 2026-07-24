@@ -94,19 +94,34 @@ Una utilidad debe ser independiente de un flujo particular siempre que sea posib
 flowchart LR
     A["Login AF"] --> B["Home"]
     B --> C["Nueva cotización"]
-    C --> D["Datos personales iniciales"]
-    D --> E["Plan, red, deducible y frecuencia"]
+    C --> D{"Tipo de póliza"}
+    D -->|Individual| DI["Titular sin dependientes"]
+    D -->|Familiar| DF["Cónyuge e hijos configurados"]
+    DI --> E["Plan, red, deducible y frecuencia"]
+    DF --> E
     E --> F["Resumen de cotización"]
     F --> G["Resumen de planes"]
     G --> H["Información personal y beneficiarios"]
     H --> I["Cuestionario médico I"]
     I --> J["Cuestionario médico II"]
-    J --> K["Confirmación y pago"]
+    J --> K["Confirmación del plan"]
     K --> L["Términos"]
     L --> M["Declaración y firmas"]
+    M --> N{"Resultado de suscripción"}
+    N -->|Estándar| O["Pago"]
+    N -->|Fuera de estándar| P["Evaluación"]
 ```
 
 El flujo genera datos personales sintéticos para varios campos y toma del Excel las decisiones funcionales que cambian el camino.
+
+Las pólizas `Individual` y `Familiar` comparten login, planes, datos del
+titular, beneficiario, cuestionarios y aceptación. La variante individual
+omite las columnas de cónyuge e hijos y usa 180 cm / 180 kg para ejercer la
+ruta fuera de estándar: después de las firmas valida el mensaje de evaluación
+y confirma que los controles de pago no aparezcan. Después de las 18 preguntas
+de antecedentes médicos, el flow espera uno de dos destinos observables:
+confirmación del plan o la sección médica adicional. Esta última se responde
+solo cuando la aplicación la muestra para los solicitantes capturados.
 
 ### Emisión Claims AF
 
@@ -125,7 +140,7 @@ La implementación actual lee información del solicitante y la registra en cons
 3. `CargarExcel` transforma la hoja en objetos usando la fila de encabezados.
 4. Solo las filas con `EscenarioPrueba` no vacío se convierten en tests.
 5. El spec pasa valores a los flows.
-6. Los flows interpretan cadenas como `Esp`, `Familiar`, `Si`, plan, red y frecuencia.
+6. Los flows interpretan cadenas como `Esp`, `Familiar`, `Individual`, `Si`, plan, red y frecuencia.
 7. Los Page Objects ejecutan acciones en la interfaz.
 8. Playwright captura evidencias conforme a la configuración.
 

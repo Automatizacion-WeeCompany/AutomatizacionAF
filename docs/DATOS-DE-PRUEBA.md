@@ -36,8 +36,8 @@ Reglas de activación:
 | Columna | Encabezado | Ejemplos de contrato funcional |
 |---|---|---|
 | F | `TipoPoliza` | `Familiar`, `Individual`. |
-| G | `ConyugePareja` | `Si`, `No`. |
-| H | `HijosMenoresDe24` | Cantidad/opción visible, por ejemplo `3+`. |
+| G | `ConyugePareja` | `Si`, `No`. Vacío para `Individual`. |
+| H | `HijosMenoresDe24` | Cantidad/opción visible, por ejemplo `3+`. Vacío para `Individual`. |
 | I | `CotizarPlan` | Plan reconocido por el flow. |
 | J | `RedProveedores` | Red reconocida por el flow. |
 | K | `Deducible` | Texto exacto de la opción visible. |
@@ -64,6 +64,11 @@ Reglas de activación:
 | V, X, Z, AB, AD | `SexoDependiente1` … `SexoDependiente5` | Sexo alineado por posición con cada dependiente. |
 | AE | `RelacionSolicitantePrimario` | Relación usada al agregar beneficiario. |
 
+Para una póliza `Individual`, las columnas U–AD deben permanecer vacías. El
+flow valida este contrato antes de intentar agregar dependientes. En una
+póliza `Familiar`, relación y sexo se conservan como pares por posición para
+evitar que una celda intermedia vacía desalinee los datos.
+
 Tipos de dependiente aceptados por el flow vigente:
 
 - `Hijo Biológico`.
@@ -79,6 +84,27 @@ Tipos de dependiente aceptados por el flow vigente:
 | AG | `P5Sustancia` | Sustancia seleccionada en la pregunta 5. |
 | AH | `SigueIngiriendo` | Respuesta condicional de la pregunta 5. |
 | AI | `CapturaPreguntasPt2` | Decide captura del cuestionario II. |
+
+Las columnas binarias de los cuestionarios aceptan `Si`, `Sí` o `SI`, además
+de `No`, sin depender de mayúsculas, acentos o espacios alrededor del valor.
+Un contenido distinto falla antes de interactuar con la pantalla e identifica
+la columna inválida. Cuando la respuesta es afirmativa, cada clic se verifica
+contra el radio seleccionado antes de capturar los datos asociados.
+
+Después del cuestionario II, la aplicación puede mostrar una sección médica
+adicional. El código no la presupone por tipo de póliza o idioma: detecta si la
+sección o la confirmación del plan quedó visible y continúa por el destino
+correspondiente.
+
+### Escenarios individuales
+
+La hoja `CotizadorAF` contiene un escenario Individual en español y otro en
+inglés. Se mantienen en la misma hoja porque comparten el contrato de columnas
+y el mismo orquestador; no es necesaria una hoja paralela.
+
+El flow asigna al titular de esos escenarios 180 cm de estatura y 180 kg de
+peso. Estos valores fijos ejercen la ruta fuera de estándar: la solicitud debe
+quedar en evaluación y no debe ofrecer el inicio del proceso de pago.
 
 ### Columnas reservadas o no conectadas
 

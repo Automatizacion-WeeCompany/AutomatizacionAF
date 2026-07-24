@@ -6,27 +6,16 @@ import {
     PasoOnceAplicacionCompletaFlow, PasoDoceRegistrarInformacionPagoFlow, PasoTreceMetodoPagoFlow
 } from "../flows/cotizadorAF.flow";
 import { InicioSesionEmisionClaimsAfFlow, EmisionClaimsAfFlow } from "../flows/emisionClaimsAf.flow";
-import path from "node:path";
-import { CargarExcel } from 'src/utilidades/CargaDatosExcel';
 import { ExtraerDatosExcel } from "src/utilidades/ObtencionDeDatos";
 import { EscenarioExcel } from "src/types/EscenarioExcel";
 
 
-const rutaExcel = path.join(__dirname, "../datos/SuitePruebas.xlsx");
-const Escenarios = new CargarExcel(rutaExcel);
-const Tests = ExtraerDatosExcel.obtenerEscenariosPorHoja('CotizadorAF');
+const Tests: EscenarioExcel[] = ExtraerDatosExcel.obtenerEscenariosPorHoja('CotizadorAF');
 const TestsEmision = ExtraerDatosExcel.obtenerEscenariosPorHoja('EmisionAF');
-
-interface OpcionesFlujoCotizacion {
-    completarPago?: boolean;
-    cuestionarioMedicoP1?: string;
-    cuestionarioMedicoP2?: string;
-}
 
 async function ejecutarFlujoCotizacion(
     page: Page,
-    escenario: EscenarioExcel & Record<string, any>,
-    opciones: OpcionesFlujoCotizacion = {},
+    escenario: EscenarioExcel,
 ) {
     const inicioSesionAF = new InicioSesionAFFlow(page);
     const homeAF = new HomeAFFlow(page);
@@ -50,10 +39,10 @@ async function ejecutarFlujoCotizacion(
     );
     await homeAF.homeAF(escenario.IdiomaCotizacion);
     await iniciarCotizacion.iniciarCotizacion(escenario.IdiomaCotizacion);
-    await pasoUnoDatosPersonales.CapturaDatosPersonales(
+    const edadTitular = await pasoUnoDatosPersonales.CapturaDatosPersonales(
         escenario.TipoPoliza,
         escenario.ConyugePareja,
-        escenario.HijosMenoresDe24.toString(),
+        String(escenario.HijosMenoresDe24 ?? ""),
     );
     await pasoDosPlanes.seleccionarPlanes(
         escenario.IdiomaCotizacion,
@@ -64,40 +53,42 @@ async function ejecutarFlujoCotizacion(
     );
     await pasoTresCotizacion.resumenCotizacion(escenario.IdiomaCotizacion);
     await pasoCuatroResumenCotizacion.resumenPlanesCot(escenario.IdiomaCotizacion);
-    await pasoCincoInformacionPersonal.informacionPersonal(escenario);
+    await pasoCincoInformacionPersonal.informacionPersonal(escenario, edadTitular);
     await pasoSeisCuestionarioMedico.CapturarCuestionarioMedicoP1(
         escenario.IdiomaCotizacion,
-        opciones.cuestionarioMedicoP1 ?? escenario.CuestionarioMedicoCaptura,
+        escenario.CuestionarioMedicoCaptura,
         escenario.P5Sustancia,
         escenario.SigueIngiriendo,
     );
     await pasoSieteCuestionarioMedico.CapturarCuestionarioMedicoP2(
         escenario.IdiomaCotizacion,
-        opciones.cuestionarioMedicoP2 ?? escenario.CapturaPreguntasPt2,
+        escenario.CapturaPreguntasPt2,
     );
     await pasoOchoConfirmacionDePlanYPago.CapturarConfirmacionDePlanYPago();
     await pasoNueveTerminosyCondicionesFlow.CapturarTerminosyCondiciones();
     await pasoDiezDeclaracion.CapturarDeclaracion();
 
-    if (opciones.completarPago) {
-        const pasoOnceAplicacionCompleta = new PasoOnceAplicacionCompletaFlow(page);
-        const pasoDoceRegistrarInformacionPago = new PasoDoceRegistrarInformacionPagoFlow(page);
-        const pasoTreceMetodoPago = new PasoTreceMetodoPagoFlow(page);
+    const pasoOnceAplicacionCompleta = new PasoOnceAplicacionCompletaFlow(page);
 
-        await pasoOnceAplicacionCompleta.CapturarAplicacionCompleta();
-        await pasoDoceRegistrarInformacionPago.CapturarInformacionPago();
-        await pasoTreceMetodoPago.CapturarMetodoPago(escenario.IdiomaCotizacion);
+    if (escenario.TipoPoliza === "Individual") {
+        await pasoOnceAplicacionCompleta.ValidarAplicacionEnEvaluacion(
+            escenario.IdiomaCotizacion,
+        );
+        return;
     }
+
+    const pasoDoceRegistrarInformacionPago = new PasoDoceRegistrarInformacionPagoFlow(page);
+    const pasoTreceMetodoPago = new PasoTreceMetodoPagoFlow(page);
+
+    await pasoOnceAplicacionCompleta.CapturarAplicacionCompleta();
+    await pasoDoceRegistrarInformacionPago.CapturarInformacionPago();
+    await pasoTreceMetodoPago.CapturarMetodoPago(escenario.IdiomaCotizacion);
 }
 
 test.describe('Cotizador AF', () => {
-    for (const escenario of Tests.filter(test => test.EscenarioPrueba)) {
+    for (const escenario of Tests.filter(escenario => escenario.EscenarioPrueba)) {
         test(`Escenario: ${escenario.EscenarioPrueba} ${escenario.IdiomaCotizacion}`, async ({ page }) => {
-            await ejecutarFlujoCotizacion(page, escenario, {
-                completarPago: true,
-                cuestionarioMedicoP1: 'No',
-                cuestionarioMedicoP2: 'No',
-            });
+            await ejecutarFlujoCotizacion(page, escenario);
         })
     }
 })
