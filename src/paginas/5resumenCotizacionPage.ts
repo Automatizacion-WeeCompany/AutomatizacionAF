@@ -1,9 +1,34 @@
-import { Page } from "@playwright/test";
+import { expect, Page } from "@playwright/test";
 
 export class ResumenPlanesCotizadosPage {
     constructor(private readonly page: Page) { }
     async ClickBtnAplicarAhora() {
-        await this.page.frameLocator('iframe#ifCotizador').locator('.button--plan').click();
+        const iframe = this.page.frameLocator('iframe#ifCotizador');
+        const botonAplicar = iframe.locator('button.btn-aplicaAhora:visible');
+        const botonContestarAhora = iframe.locator('#AnswerFormNow');
+
+        await expect(botonAplicar).toBeVisible({ timeout: 30000 });
+        await expect(botonAplicar).toBeEnabled();
+        await botonAplicar.scrollIntoViewIfNeeded();
+
+        for (let intento = 1; intento <= 2; intento++) {
+            if (intento === 1) {
+                await botonAplicar.click();
+            } else {
+                await botonAplicar.evaluate((boton: HTMLButtonElement) => boton.click());
+            }
+
+            const modalVisible = await botonContestarAhora
+                .waitFor({ state: 'visible', timeout: 5000 })
+                .then(() => true)
+                .catch(() => false);
+
+            if (modalVisible) {
+                return;
+            }
+        }
+
+        await expect(botonContestarAhora).toBeVisible({ timeout: 15000 });
     }
     async ClickBtnCompartir() {
         await this.page.frameLocator('iframe#ifCotizador').locator('#openModalEnviar').click();
