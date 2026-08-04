@@ -8,13 +8,13 @@ La suite debe demostrar que los recorridos críticos de AF y Claims avanzan por 
 
 | Área | Cobertura actual | Fuente de escenarios |
 |---|---|---|
-| Cotizador AF | Recorrido completo desde login hasta declaración y firmas. | Hoja `CotizadorAF`. |
+| Cotizador AF | 192 escenarios familiares e individuales, con emisión o evaluación BMI. | `ConfiguracionesPlan × PerfilesCotizacion`. |
 | Emisión Claims AF | Login, búsqueda por folio y recorrido de secciones. | Hoja `EmisionAF`. |
 | Idiomas | Selección de Esp/Eng/Port; contratos JSON completos solo en parte. | Excel + JSON. |
 | Navegadores | Chromium y Firefox. | Proyectos Playwright. |
 | Evidencias | Lista, HTML, video, screenshot y trace. | Configuración Playwright. |
 
-En la auditoría del 16 de julio de 2026, Playwright descubrió 18 tests: ocho escenarios de Cotizador y uno de Emisión, repetidos en dos navegadores. Este número es una fotografía; usa `npx playwright test --list` como fuente actual.
+El 3 de agosto de 2026, Playwright descubrió 386 tests: 192 escenarios de Cotizador y uno de Emisión, repetidos en dos navegadores. Este número es una fotografía; usa `npx playwright test --list` como fuente actual.
 
 ## Tipos de validación vigentes
 
@@ -25,6 +25,8 @@ En la auditoría del 16 de julio de 2026, Playwright descubrió 18 tests: ocho e
 - Selección de opciones y llenado de formularios.
 - Recorrido de pestañas de la solicitud en Claims.
 - Errores explícitos para valores de datos no soportados en varias ramas.
+- Resultado explícito de emisión o evaluación BMI y objetivo antropométrico trazable.
+- En la matriz activa, la evaluación BMI se espera únicamente cuando el objetivo es el titular; BMI de dependientes queda reservado para un flujo adicional.
 
 ## Brechas actuales
 
@@ -34,7 +36,7 @@ En la auditoría del 16 de julio de 2026, Playwright descubrió 18 tests: ocho e
 - No existe pipeline CI versionado.
 - Los contratos de textos en inglés y portugués están referenciados pero faltan.
 - Existen esperas fijas y localizadores directos fuera de Page Objects.
-- El estado final del cotizador después de la firma no tiene una aserción de póliza/confirmación conectada.
+- El gateway de pago externo puede introducir intermitencia en la redirección final.
 
 Estas brechas no invalidan la arquitectura vigente; definen el orden de fortalecimiento.
 

@@ -4,7 +4,7 @@ Framework de automatización web end-to-end para los procesos de American Fideli
 
 ## Alcance actual
 
-- Cotizador AF: cotizaciones familiares e individuales en español e inglés, desde el inicio de sesión hasta cuestionarios médicos, aceptación y firma; valida pago o evaluación según el riesgo del caso.
+- Cotizador AF: matriz de 192 cotizaciones familiares e individuales, separada en perfiles reutilizables y combinaciones de plan/red/deducible; valida emisión o evaluación BMI según el objetivo del caso.
 - Emisión Claims AF: inicio de sesión, búsqueda de una solicitud por folio y recorrido de las secciones de emisión.
 - Validación de textos por idioma a partir de archivos JSON.
 - Evidencias Playwright: reporte HTML, video, captura y trace según la política configurada.
@@ -50,8 +50,11 @@ npx playwright test --project=Chromium
 # Solo Firefox
 npx playwright test --project=Firefox
 
-# Un escenario por nombre
-npx playwright test --project=Chromium -g "Cotizacion Vital Core Anual"
+# Un perfil y configuración por nombre
+npx playwright test --project=Chromium -g "Individual Normal | Superior Ultra Anual"
+
+# Solo cotizaciones familiares
+npx playwright test src/tests/cotizacionesFamiliaresAF.spec.ts --project=Chromium
 
 # Interfaz de Playwright
 npm run test:ui

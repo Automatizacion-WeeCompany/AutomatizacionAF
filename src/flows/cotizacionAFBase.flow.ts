@@ -1,0 +1,162 @@
+import { Page } from "@playwright/test";
+import { guardarLogPoliza } from "../utilidades/LogPolizas";
+import { EscenarioExcel } from "../types/EscenarioExcel";
+import {
+  HomeAFFlow,
+  InicioSesionAFFlow,
+  IniciarCotizacionFlow,
+  PasoCincoInformacionPersonalFlow,
+  PasoCuatroResumenCotizacionFlow,
+  PasoDiezDeclaracionFlow,
+  PasoDoceRegistrarInformacionPagoFlow,
+  PasoNueveTerminosyCondicionesFlow,
+  PasoOchoConfirmacionDePlanYPagoFlow,
+  PasoOnceAplicacionCompletaFlow,
+  PasoSeisCuestionarioMedicoFlow,
+  PasoSieteCuestionarioMedicoFlow,
+  PasoTreceMetodoPagoFlow,
+  PasoTresCotizacionFlow,
+  PasoDosPlanesFlow,
+  PasoUnoDatosPersonalesFlow,
+} from "./cotizadorAF.flow";
+
+export type ResultadoEjecucionCotizacion =
+  | { resultado: "EvaluacionBMI" }
+  | {
+      resultado: "Emision";
+      nombreTitular: string;
+      numeroPoliza: string;
+    };
+
+export class CotizacionAFBaseFlow {
+  private readonly inicioSesionAF: InicioSesionAFFlow;
+  private readonly homeAF: HomeAFFlow;
+  private readonly iniciarCotizacion: IniciarCotizacionFlow;
+  private readonly pasoUnoDatosPersonales: PasoUnoDatosPersonalesFlow;
+  private readonly pasoDosPlanes: PasoDosPlanesFlow;
+  private readonly pasoTresCotizacion: PasoTresCotizacionFlow;
+  private readonly pasoCuatroResumenCotizacion: PasoCuatroResumenCotizacionFlow;
+  private readonly pasoCincoInformacionPersonal: PasoCincoInformacionPersonalFlow;
+  private readonly pasoSeisCuestionarioMedico: PasoSeisCuestionarioMedicoFlow;
+  private readonly pasoSieteCuestionarioMedico: PasoSieteCuestionarioMedicoFlow;
+  private readonly pasoOchoConfirmacionDePlanYPago: PasoOchoConfirmacionDePlanYPagoFlow;
+  private readonly pasoNueveTerminosyCondiciones: PasoNueveTerminosyCondicionesFlow;
+  private readonly pasoDiezDeclaracion: PasoDiezDeclaracionFlow;
+  private readonly pasoOnceAplicacionCompleta: PasoOnceAplicacionCompletaFlow;
+  private readonly pasoDoceRegistrarInformacionPago: PasoDoceRegistrarInformacionPagoFlow;
+  private readonly pasoTreceMetodoPago: PasoTreceMetodoPagoFlow;
+
+  constructor(page: Page) {
+    this.inicioSesionAF = new InicioSesionAFFlow(page);
+    this.homeAF = new HomeAFFlow(page);
+    this.iniciarCotizacion = new IniciarCotizacionFlow(page);
+    this.pasoUnoDatosPersonales = new PasoUnoDatosPersonalesFlow(page);
+    this.pasoDosPlanes = new PasoDosPlanesFlow(page);
+    this.pasoTresCotizacion = new PasoTresCotizacionFlow(page);
+    this.pasoCuatroResumenCotizacion = new PasoCuatroResumenCotizacionFlow(page);
+    this.pasoCincoInformacionPersonal = new PasoCincoInformacionPersonalFlow(page);
+    this.pasoSeisCuestionarioMedico = new PasoSeisCuestionarioMedicoFlow(page);
+    this.pasoSieteCuestionarioMedico = new PasoSieteCuestionarioMedicoFlow(page);
+    this.pasoOchoConfirmacionDePlanYPago =
+      new PasoOchoConfirmacionDePlanYPagoFlow(page);
+    this.pasoNueveTerminosyCondiciones =
+      new PasoNueveTerminosyCondicionesFlow(page);
+    this.pasoDiezDeclaracion = new PasoDiezDeclaracionFlow(page);
+    this.pasoOnceAplicacionCompleta = new PasoOnceAplicacionCompletaFlow(page);
+    this.pasoDoceRegistrarInformacionPago =
+      new PasoDoceRegistrarInformacionPagoFlow(page);
+    this.pasoTreceMetodoPago = new PasoTreceMetodoPagoFlow(page);
+  }
+
+  async ejecutar(
+    escenario: EscenarioExcel,
+    numeroFlujo: number,
+  ): Promise<ResultadoEjecucionCotizacion> {
+    await this.inicioSesionAF.paginaInicio(escenario.Url);
+    await this.inicioSesionAF.iniciarSesionAF(
+      escenario.IdiomaCotizacion,
+      escenario.CorreoInicio,
+      escenario.Contrasena.toString(),
+    );
+    await this.homeAF.homeAF(escenario.IdiomaCotizacion);
+    await this.iniciarCotizacion.iniciarCotizacion(
+      escenario.IdiomaCotizacion,
+    );
+
+    const { edadTitular, edadConyuge } =
+      await this.pasoUnoDatosPersonales.CapturaDatosPersonales(
+        escenario.TipoPoliza,
+        escenario.ConyugePareja,
+        String(escenario.HijosMenoresDe24 ?? ""),
+      );
+
+    await this.pasoDosPlanes.seleccionarPlanes(
+      escenario.IdiomaCotizacion,
+      escenario.CotizarPlan,
+      escenario.RedProveedores,
+      escenario.Deducible,
+      escenario.FrecuenciaPago,
+    );
+    await this.pasoTresCotizacion.resumenCotizacion(
+      escenario.IdiomaCotizacion,
+    );
+    await this.pasoCuatroResumenCotizacion.resumenPlanesCot(
+      escenario.IdiomaCotizacion,
+    );
+    await this.pasoCincoInformacionPersonal.informacionPersonal(
+      escenario,
+      edadTitular,
+      numeroFlujo,
+      edadConyuge,
+    );
+    await this.pasoSeisCuestionarioMedico.CapturarCuestionarioMedicoP1(
+      escenario.IdiomaCotizacion,
+      escenario.CuestionarioMedicoCaptura,
+      escenario.P5Sustancia,
+      escenario.SigueIngiriendo,
+    );
+    await this.pasoSieteCuestionarioMedico.CapturarCuestionarioMedicoP2(
+      escenario.IdiomaCotizacion,
+      escenario.CapturaPreguntasPt2,
+    );
+    await this.pasoOchoConfirmacionDePlanYPago.CapturarConfirmacionDePlanYPago();
+    await this.pasoNueveTerminosyCondiciones.CapturarTerminosyCondiciones();
+    await this.pasoDiezDeclaracion.CapturarDeclaracion();
+
+    if (escenario.ResultadoEsperado === "EvaluacionBMI") {
+      if (escenario.ObjetivoBMI !== "Titular") {
+        throw new Error(
+          `La evaluación BMI de ${escenario.ObjetivoBMI} pertenece al flujo adicional de dependientes`,
+        );
+      }
+      await this.pasoOnceAplicacionCompleta.ValidarAplicacionEnEvaluacion(
+        escenario.IdiomaCotizacion,
+      );
+      return { resultado: "EvaluacionBMI" };
+    }
+
+    if (escenario.ResultadoEsperado !== "Emision") {
+      throw new Error(
+        `Resultado esperado no soportado: ${escenario.ResultadoEsperado}`,
+      );
+    }
+
+    await this.pasoOnceAplicacionCompleta.CapturarAplicacionCompleta();
+    await this.pasoDoceRegistrarInformacionPago.CapturarInformacionPago();
+    const confirmacion = await this.pasoTreceMetodoPago.CapturarMetodoPago(
+      escenario.IdiomaCotizacion,
+    );
+    await guardarLogPoliza({
+      numeroFlujo,
+      escenario: `${escenario.EscenarioPrueba} ${escenario.IdiomaCotizacion}`,
+      nombre: confirmacion.nombreTitular,
+      poliza: confirmacion.numeroPoliza,
+    });
+
+    return {
+      resultado: "Emision",
+      nombreTitular: confirmacion.nombreTitular,
+      numeroPoliza: confirmacion.numeroPoliza,
+    };
+  }
+}

@@ -7,8 +7,6 @@ const EVALUACION_POR_IDIOMA: Record<
 > = {
     Esp: {
         patron: /evaluaci[oó]n|evaluad[ao]/i,
-        mensajeEsperado:
-            'La solicitud será evaluada y se notificará por correo electrónico una vez que se tenga una decisión.',
     },
     Eng: {
         patron: /evaluation|evaluated|review/i,

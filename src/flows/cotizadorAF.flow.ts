@@ -13,7 +13,7 @@ import {
   Idioma,
   obtenerOpcionPorIdioma,
 } from "src/utilidades/validacionIdiomas";
-import { EscenarioExcel } from "../types/EscenarioExcel";
+import { EscenarioExcel, ObjetivoBMI } from "../types/EscenarioExcel";
 import { CuestionarioMedicoPt2Page } from "@pages/8cuestionarioMedicoPt2Page";
 import { ConfirmacionDePlanYPagoPage } from "../paginas/9confirmacionDePlanyPagoPage";
 import { TerminosyCondicionesPage } from "@pages/10terminosyCondicionesPage";
@@ -37,7 +37,7 @@ const CONFIGURACION_IDIOMAS: Record<
   Port: { opcion: "PORT", textoConfirmacion: "Bem-vindo" },
 };
 
-const DATOS_ANTROPOMETRICOS_EVALUACION_INDIVIDUAL = Object.freeze({
+const DATOS_ANTROPOMETRICOS_RECHAZO_BMI = Object.freeze({
   estaturaCm: 180,
   pesoKg: 180,
 });
@@ -166,6 +166,7 @@ export class PasoUnoDatosPersonalesFlow {
       await this.CapturaDatosPersonalesPage.ingresaEdadTitular();
     await this.CapturaDatosPersonalesPage.seleccionaPaisRecidenciaTitular();
 
+    let edadConyuge: number | undefined;
     switch (TipoPoliza) {
       case "Familiar":
         await this.CapturaDatosPersonalesPage.seleccionaTipoPolizaFamiliar();
@@ -183,7 +184,8 @@ export class PasoUnoDatosPersonalesFlow {
             "HijosMenoresDe24 es obligatorio para una póliza Familiar",
           );
         }
-        await this.CapturaDatosPersonalesPage.ingresaEdadDependiente();
+        edadConyuge =
+          await this.CapturaDatosPersonalesPage.ingresaEdadDependiente();
         await this.CapturaDatosPersonalesPage.seleccionaNumeroHijosMenoresDe24(
           HijosMenoresDe24,
         );
@@ -198,7 +200,7 @@ export class PasoUnoDatosPersonalesFlow {
     }
 
     await this.CapturaDatosPersonalesPage.clickBtnContinuar();
-    return edadTitular;
+    return { edadTitular, edadConyuge };
   }
 }
 
@@ -330,7 +332,12 @@ export class PasoCincoInformacionPersonalFlow {
     this.informacionPersonalPage = new InformacionPersonalPage(this.page);
   }
 
-  async informacionPersonal(escenario: EscenarioExcel, edadTitular: number) {
+  async informacionPersonal(
+    escenario: EscenarioExcel,
+    edadTitular: number,
+    numeroFlujo: number,
+    edadConyuge?: number,
+  ) {
     const {
       IdiomaCotizacion,
       SexoAlNacer,
@@ -358,11 +365,11 @@ export class PasoCincoInformacionPersonalFlow {
       pantalla: "InformacionPersonal",
       idioma: IdiomaCotizacion as Idioma,
     });
-    await this.informacionPersonalPage.IngresaSegundoNombre();
+    await this.informacionPersonalPage.IngresaSegundoNombre(numeroFlujo);
     await this.informacionPersonalPage.SeleccionaPaisNacimiento();
     const datosAntropometricos =
-      escenario.TipoPoliza === "Individual"
-        ? DATOS_ANTROPOMETRICOS_EVALUACION_INDIVIDUAL
+      escenario.ObjetivoBMI === "Titular"
+        ? DATOS_ANTROPOMETRICOS_RECHAZO_BMI
         : undefined;
     await this.informacionPersonalPage.IngresaEstatura(
       datosAntropometricos?.estaturaCm,
@@ -413,6 +420,17 @@ export class PasoCincoInformacionPersonalFlow {
     if (EliminarDirCorr === "Si") {
       await this.informacionPersonalPage.ClickBtnEliminarDireccionDeCorrespondencia();
     }
+    if (escenario.TipoPoliza === "Familiar" && escenario.ConyugePareja === "Si") {
+      if (!edadConyuge) {
+        throw new Error("No se conservó la edad del cónyuge capturada en la cotización");
+      }
+      await this.capturarConyuge(
+        edadConyuge,
+        IdiomaCotizacion as Idioma,
+        OcupacionTitular,
+        TipoIdentificacionTitular,
+      );
+    }
     const dependientes = [
       { relacion: Hijo1, sexo: SexoDependiente1 },
       { relacion: Hijo2, sexo: SexoDependiente2 },
@@ -427,7 +445,7 @@ export class PasoCincoInformacionPersonalFlow {
       );
     }
     if (escenario.TipoPoliza === "Familiar") {
-      await this.procesarDependientes(dependientes);
+      await this.procesarDependientes(dependientes, escenario.ObjetivoBMI);
     }
     //Agrega y valdia informacion del beneficiario
     await this.informacionPersonalPage.ClickBtnAgregarInfoBeneficiario();
@@ -479,11 +497,54 @@ export class PasoCincoInformacionPersonalFlow {
     }
   }
 
+  private async capturarConyuge(
+    edadConyuge: number,
+    idiomaCotizacion: Idioma,
+    ocupacion: string,
+    tipoIdentificacion: string,
+  ) {
+    await this.informacionPersonalPage.ClickBtnAgregarConyuge();
+    await this.informacionPersonalPage.ClickCheckConyuge();
+    await this.informacionPersonalPage.IngresaApellidoDependiente();
+    await this.informacionPersonalPage.IngresaNombreDependiente();
+    await this.informacionPersonalPage.IngresaFechaNacimientoConyuge(edadConyuge);
+    await this.informacionPersonalPage.ClickCheckSexoNacerDependienteFemenino();
+    await this.informacionPersonalPage.ClickCheckEstadoCivilConyuge();
+    await this.informacionPersonalPage.SeleccionaPaisNacimientoDependiente();
+    await this.informacionPersonalPage.IngresaEstaturaDependiente();
+    await this.informacionPersonalPage.IngresaPesoDependiente();
+    await this.informacionPersonalPage.IngresaTelefonoConyuge();
+    await this.informacionPersonalPage.IngresaCorreoConyuge();
+    await this.informacionPersonalPage.SeleccionaOcupacionConyuge(
+      obtenerOpcionPorIdioma(
+        "OcupacionTitular",
+        ocupacion,
+        idiomaCotizacion,
+      ),
+    );
+    await this.informacionPersonalPage.SeleccionaCiudadaniaDependiente();
+    await this.informacionPersonalPage.SeleccionaPaisResidenciaConyuge();
+    if (await this.informacionPersonalPage.EsVisibleIdentificacionConyuge()) {
+      await this.informacionPersonalPage.SeleccionaTipoIdentificacionConyuge(
+        obtenerOpcionPorIdioma(
+          "TipoIdentificacionTitular",
+          tipoIdentificacion,
+          idiomaCotizacion,
+        ),
+      );
+      await this.informacionPersonalPage.IngresaNumeroIdentificacionConyuge();
+      await this.informacionPersonalPage.SeleccionaPaisExpedicionIdConyuge();
+    }
+    await this.informacionPersonalPage.SeleccionaNoEstudianteConyuge();
+    await this.informacionPersonalPage.ClickBtnGuardarHijo();
+  }
+
   private async procesarDependientes(
     dependientes: Array<{
       relacion: string | undefined;
       sexo: string | undefined;
     }>,
+    objetivoBMI: ObjetivoBMI,
   ) {
     const hijosValidos = new Set([
       "Hijo Biológico",
@@ -519,7 +580,10 @@ export class PasoCincoInformacionPersonalFlow {
 
       await this.informacionPersonalPage.IngresaApellidoDependiente();
       await this.informacionPersonalPage.IngresaNombreDependiente();
-      await this.informacionPersonalPage.IngresaFechaNacimientoDependiente();
+      const esObjetivoBMI = objetivoBMI === `Dependiente${i + 1}`;
+      await this.informacionPersonalPage.IngresaFechaNacimientoDependiente(
+        esObjetivoBMI ? 20 : undefined,
+      );
       if (!sexo || !sexosValidos.has(sexo)) {
         throw new Error(
           `Sexo al nacer no soportado o faltante para el dependiente #${i + 1}: ${sexo}`,
@@ -527,8 +591,15 @@ export class PasoCincoInformacionPersonalFlow {
       }
 
       await this.informacionPersonalPage.SeleccionaPaisNacimientoDependiente();
-      await this.informacionPersonalPage.IngresaEstaturaDependiente();
-      await this.informacionPersonalPage.IngresaPesoDependiente();
+      const datosAntropometricos = esObjetivoBMI
+        ? DATOS_ANTROPOMETRICOS_RECHAZO_BMI
+        : undefined;
+      await this.informacionPersonalPage.IngresaEstaturaDependiente(
+        datosAntropometricos?.estaturaCm,
+      );
+      await this.informacionPersonalPage.IngresaPesoDependiente(
+        datosAntropometricos?.pesoKg,
+      );
       await this.informacionPersonalPage.SeleccionaCiudadaniaDependiente();
       // Los selects de país vuelven a renderizar parte del modal y pueden
       // limpiar el sexo; se selecciona al final para asegurar su persistencia.
@@ -539,6 +610,9 @@ export class PasoCincoInformacionPersonalFlow {
         case "Femenino":
           await this.informacionPersonalPage.ClickCheckSexoNacerDependienteFemenino();
           break;
+      }
+      if (esObjetivoBMI) {
+        await this.informacionPersonalPage.SeleccionaSiEstudianteDependiente();
       }
       await this.informacionPersonalPage.ClickBtnGuardarHijo();
     }
@@ -598,6 +672,7 @@ export class PasoSeisCuestionarioMedicoFlow {
     await this.cuestionarioMedicoPt1Page.CheckSiP2();
     await this.cuestionarioMedicoPt1Page.SeleccionarPersonaAleatoriaP2();
     await this.cuestionarioMedicoPt1Page.SubirArchivoFirmaP2();
+    await this.cuestionarioMedicoPt1Page.SubirArchivoReciboP2();
     await this.cuestionarioMedicoPt1Page.ClickBtnGuardarP2();
 
     await this.cuestionarioMedicoPt1Page.CheckSiP3();
