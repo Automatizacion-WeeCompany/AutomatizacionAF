@@ -39,8 +39,9 @@ export class InicioCotizacionDatosPersonalesAFPage {
     }
     async ingresaEdadDependiente() {
         const { faker } = await import("@faker-js/faker");
-        const EdadDependiente = faker.number.int({ min: 18, max: 76 }).toString();
-        await this.page.frameLocator('iframe#ifCotizador').locator('#datepickerBirthdayConyugue').pressSequentially(EdadDependiente, { delay: 70 });
+        const edadDependiente = faker.number.int({ min: 18, max: 76 });
+        await this.page.frameLocator('iframe#ifCotizador').locator('#datepickerBirthdayConyugue').pressSequentially(edadDependiente.toString(), { delay: 70 });
+        return edadDependiente;
     }
     async seleccionaNumeroHijosMenoresDe24(HijosMenoresDe24: string) {
         await this.page.frameLocator('iframe#ifCotizador').locator('#selectNumHijos').selectOption(HijosMenoresDe24);

@@ -1,6 +1,8 @@
 import { defineConfig, devices } from '@playwright/test';
 import path from 'node:path';
 
+const VIEWPORT_ESTABLE = { width: 1280, height: 720 };
+
 console.log('✅ Cargando configuración de Playwright desde Nueva configuración /src/configuraciones/playwright.config.ts');
 export default defineConfig({
   testDir: path.join(__dirname, '../tests'),
@@ -24,10 +26,7 @@ export default defineConfig({
       use: {
         browserName: 'chromium',
         headless: false,
-        viewport: null,
-        launchOptions: {
-          args: ['--start-maximized']
-        }
+        viewport: VIEWPORT_ESTABLE,
       },
     },
     {
@@ -35,10 +34,7 @@ export default defineConfig({
       use: {
         browserName: 'firefox',
         headless: false,
-        viewport: null,
-        launchOptions: {
-          args: ['--start-maximized']
-        }
+        viewport: VIEWPORT_ESTABLE,
       },
     },
   ],

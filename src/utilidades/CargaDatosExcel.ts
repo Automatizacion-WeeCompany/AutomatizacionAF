@@ -7,6 +7,11 @@ export class CargarExcel {
     const workbook = XLSX.readFile(rutaArchivo);
     const sheetName = nombreHoja || workbook.SheetNames[0];
     const worksheet = workbook.Sheets[sheetName];
+    if (!worksheet) {
+      throw new Error(
+        `No existe la hoja "${sheetName}" en ${rutaArchivo}. Hojas disponibles: ${workbook.SheetNames.join(', ')}`,
+      );
+    }
     this.datos = XLSX.utils.sheet_to_json(worksheet);
   }
 

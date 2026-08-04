@@ -3,9 +3,35 @@ import { seleccionarOpcionAleatoriaDesdeLocator } from "src/utilidades/SelectAle
 
 export class InformacionPersonalPage {
     constructor(private readonly page: Page) { }
-    async IngresaSegundoNombre() {
-        await this.page.frameLocator('iframe#ifCotizador').locator('#txtNombreSegundo').waitFor({ state: 'visible', timeout: 15000 });
-        await this.page.frameLocator('iframe#ifCotizador').locator('#txtNombreSegundo').fill('Reveniew');
+    async IngresaSegundoNombre(numeroFlujo: number) {
+        if (!Number.isInteger(numeroFlujo) || numeroFlujo <= 0) {
+            throw new Error(`El número de flujo debe ser un entero positivo: ${numeroFlujo}`);
+        }
+
+        const segundoNombre = `WeeBoot ${numeroFlujo}`;
+        const campoSegundoNombre = this.page.frameLocator('iframe#ifCotizador').locator('#txtNombreSegundo');
+
+        await campoSegundoNombre.waitFor({ state: 'visible', timeout: 15000 });
+        await campoSegundoNombre.evaluate((elemento, valor) => {
+            const input = elemento as HTMLInputElement;
+            const conservaValidacionLetras = input.classList.contains('ValidLetters');
+            const asignarValor = Object.getOwnPropertyDescriptor(
+                HTMLInputElement.prototype,
+                'value',
+            )?.set;
+
+            input.classList.remove('ValidLetters');
+            asignarValor?.call(input, valor);
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+            input.dispatchEvent(new Event('change', { bubbles: true }));
+            asignarValor?.call(input, valor);
+
+            if (conservaValidacionLetras) {
+                input.classList.add('ValidLetters');
+            }
+        }, segundoNombre);
+        await expect(campoSegundoNombre).toHaveValue(segundoNombre);
+        return segundoNombre;
     }
     async IngresaFechaNacimiento(edadTitular: number) {
         const fechaActual = new Date();
@@ -202,12 +228,26 @@ export class InformacionPersonalPage {
         await this.page.frameLocator('iframe#ifCotizador').locator('#datepickerBirthdayBeneficiario').pressSequentially(FechaNacimientoBeneficiario);
     }
     async SeleccionaPaisRecidenciaBeneficiario() {
-        await this.page.frameLocator('iframe#ifCotizador').locator('#PaisResidenciaSelectBenef').click();
-        await seleccionarOpcionAleatoriaDesdeLocator(this.page.frameLocator('iframe#ifCotizador').locator('#PaisResidenciaSelectBenef'));
+        const select = this.page
+            .frameLocator('iframe#ifCotizador')
+            .locator('#PaisResidenciaSelectBenef');
+        await expect(select).toBeVisible({ timeout: 15000 });
+        if (await select.isDisabled()) {
+            await expect(select).not.toHaveValue('');
+            return;
+        }
+        await seleccionarOpcionAleatoriaDesdeLocator(select);
     }
     async SeleccionaCiudadaniaBeneficiario() {
-        await this.page.frameLocator('iframe#ifCotizador').locator('#PaisCiudadaniaSelectBenef').click();
-        await seleccionarOpcionAleatoriaDesdeLocator(this.page.frameLocator('iframe#ifCotizador').locator('#PaisCiudadaniaSelectBenef'));
+        const select = this.page
+            .frameLocator('iframe#ifCotizador')
+            .locator('#PaisCiudadaniaSelectBenef');
+        await expect(select).toBeVisible({ timeout: 15000 });
+        if (await select.isDisabled()) {
+            await expect(select).not.toHaveValue('');
+            return;
+        }
+        await seleccionarOpcionAleatoriaDesdeLocator(select);
     }
     async IngresaTelefonoBeneficiario() {
         const { faker } = await import("@faker-js/faker");
@@ -238,10 +278,39 @@ export class InformacionPersonalPage {
         ).toBeHidden({ timeout: 10000 });
     }
     async ClickBtnAgregarHijo() {
-        await this.page.frameLocator('iframe#ifCotizador').locator('#openModalAddDependiente').click();
+        const iframe = this.page.frameLocator('iframe#ifCotizador');
+        const botonAgregarHijo = iframe
+            .getByRole('button', {
+                name: /Add Child|Agregar Hijo|Adicionar Filho/i,
+            })
+            .first();
+        await expect(botonAgregarHijo).toBeVisible({ timeout: 15000 });
+        await botonAgregarHijo.click({ timeout: 15000 });
+        await expect(iframe.locator('#ModalAddDependiente')).toBeVisible({ timeout: 15000 });
+    }
+    async ClickBtnAgregarConyuge() {
+        const botonAgregarConyuge = this.page
+            .frameLocator('iframe#ifCotizador')
+            .getByText(
+                /Add Spouse \/ Domestic Partner|Agregar Cónyuge \/ Pareja Doméstica|Adicionar Cônjuge \/ Parceiro Doméstico/i,
+            )
+            .first();
+        await expect(botonAgregarConyuge).toBeVisible({ timeout: 15000 });
+        await botonAgregarConyuge.click();
+        await expect(
+            this.page.frameLocator('iframe#ifCotizador').locator('#ModalAddDependiente'),
+        ).toBeVisible({ timeout: 15000 });
+    }
+    async ClickCheckConyuge() {
+        const iframe = this.page.frameLocator('iframe#ifCotizador');
+        await iframe.locator('label.checkbox-design[for="optConyugue"]').click();
+        await expect(iframe.locator('#optConyugue')).toBeChecked();
     }
     async ClickCheckHijoBiologico() {
-        await this.page.frameLocator('iframe#ifCotizador').locator('label.checkbox-design[for="optHijoBio"]').click();
+        const iframe = this.page.frameLocator('iframe#ifCotizador');
+        const opcion = iframe.locator('label.checkbox-design[for="optHijoBio"]');
+        await expect(opcion).toBeVisible({ timeout: 15000 });
+        await opcion.click({ timeout: 15000 });
     }
     async ClickCheckHijoAdoptadoLegalmente() {
         await this.page.frameLocator('iframe#ifCotizador').locator('label.checkbox-design[for="optLegalmente"]').click();
@@ -262,13 +331,43 @@ export class InformacionPersonalPage {
         const NombreDependiente = faker.person.firstName();
         await this.page.frameLocator('iframe#ifCotizador').locator('#txtNombreDependiente').pressSequentially(NombreDependiente);
     }
-    async IngresaFechaNacimientoDependiente() {
+    async IngresaFechaNacimientoDependiente(edadDependiente?: number) {
         const { faker } = await import("@faker-js/faker");
-        const Dia = faker.number.int({ min: 1, max: 30 }).toString();
-        const Mes = faker.number.int({ min: 1, max: 12 }).toString();
-        const Anio = faker.number.int({ min: 2007, max: 2025 }).toString();
+        const fechaActual = new Date();
+        const Dia = edadDependiente
+            ? String(Math.min(fechaActual.getDate(), 28)).padStart(2, '0')
+            : faker.number.int({ min: 1, max: 28 }).toString().padStart(2, '0');
+        const Mes = edadDependiente
+            ? String(fechaActual.getMonth() + 1).padStart(2, '0')
+            : faker.number.int({ min: 1, max: 12 }).toString().padStart(2, '0');
+        const Anio = edadDependiente
+            ? String(fechaActual.getFullYear() - edadDependiente)
+            : faker.number.int({ min: 2008, max: 2025 }).toString();
         const FechaNacimientoDependiente = `${Mes}/${Dia}/${Anio}`;
-        await this.page.frameLocator('iframe#ifCotizador').locator('#datepickerBirthday').pressSequentially(FechaNacimientoDependiente);
+        const input = this.page.frameLocator('iframe#ifCotizador').locator('#datepickerBirthday');
+        await input.fill(FechaNacimientoDependiente);
+        await input.press('Tab');
+        await expect(input).toHaveValue(FechaNacimientoDependiente);
+    }
+    async IngresaFechaNacimientoConyuge(edadConyuge: number) {
+        if (!Number.isInteger(edadConyuge) || edadConyuge < 18) {
+            throw new Error(`Edad de cónyuge inválida: ${edadConyuge}`);
+        }
+
+        const fechaActual = new Date();
+        const fechaNacimiento = new Date(
+            fechaActual.getFullYear() - edadConyuge,
+            fechaActual.getMonth(),
+            Math.min(fechaActual.getDate(), 28),
+        );
+        const mes = String(fechaNacimiento.getMonth() + 1).padStart(2, '0');
+        const dia = String(fechaNacimiento.getDate()).padStart(2, '0');
+        const fecha = `${mes}/${dia}/${fechaNacimiento.getFullYear()}`;
+        const input = this.page.frameLocator('iframe#ifCotizador').locator('#datepickerBirthday');
+
+        await input.fill(fecha);
+        await input.press('Tab');
+        await expect(input).toHaveValue(fecha);
     }
     async ClickCheckSexoNacerDependienteMasculino() {
         await this.page.frameLocator('iframe#ifCotizador').locator('label.checkbox-design[for="optMasculinoBenefi"]').click();
@@ -282,25 +381,104 @@ export class InformacionPersonalPage {
         await this.page.frameLocator('iframe#ifCotizador').locator('#PaisNacimientoSelectDependiente').click();
         await seleccionarOpcionAleatoriaDesdeLocator(this.page.frameLocator('iframe#ifCotizador').locator('#PaisNacimientoSelectDependiente'));
     }
-    async IngresaEstaturaDependiente() {
-        const { faker } = await import("@faker-js/faker");
-        const AlturaDependiente = faker.number.int({ min: 150, max: 170 }).toString();
-        await this.page.frameLocator('iframe#ifCotizador').locator('#AlturaDependiente').pressSequentially(AlturaDependiente);
+    async IngresaEstaturaDependiente(estaturaCm?: number) {
+        const alturaDependiente = estaturaCm ?? await this.generarValorAleatorio(150, 170);
+        await this.ingresarDatoAntropometrico('#AlturaDependiente', alturaDependiente);
+        return alturaDependiente;
     }
-    async IngresaPesoDependiente() {
-        const { faker } = await import("@faker-js/faker");
-        const PesoDependiente = faker.number.int({ min: 50, max: 85 }).toString();
-        await this.page.frameLocator('iframe#ifCotizador').locator('#pesoDependiente').pressSequentially(PesoDependiente);
+    async IngresaPesoDependiente(pesoKg?: number) {
+        const pesoDependiente = pesoKg ?? await this.generarValorAleatorio(50, 85);
+        await this.ingresarDatoAntropometrico('#pesoDependiente', pesoDependiente);
+        return pesoDependiente;
     }
     async SeleccionaCiudadaniaDependiente() {
         await this.page.frameLocator('iframe#ifCotizador').locator('#PaisEmisionSelectDependienteSelectCiudadania').click();
         await seleccionarOpcionAleatoriaDesdeLocator(this.page.frameLocator('iframe#ifCotizador').locator('#PaisEmisionSelectDependienteSelectCiudadania'));
     }
+    async ClickCheckEstadoCivilConyuge() {
+        const iframe = this.page.frameLocator('iframe#ifCotizador');
+        await iframe.locator('label.checkbox-design[for="optCasadoBenef"]').click();
+        await expect(iframe.locator('#optCasadoBenef')).toBeChecked();
+    }
+    async IngresaTelefonoConyuge() {
+        const iframe = this.page.frameLocator('iframe#ifCotizador');
+        const input = iframe.locator('#txtCelularDependiente');
+        await expect(input).toBeVisible({ timeout: 15000 });
+        await input.fill('5555550101');
+        await expect(input).toHaveValue('5555550101');
+    }
+    async IngresaCorreoConyuge() {
+        const { faker } = await import("@faker-js/faker");
+        const correo = faker.internet.email({ provider: 'yopmail.com' });
+        const input = this.page.frameLocator('iframe#ifCotizador').locator('#txtCorreoDEpendioente');
+        await input.fill(correo);
+        await expect(input).toHaveValue(correo);
+    }
+    async SeleccionaOcupacionConyuge(ocupacion: string) {
+        const select = this.page.frameLocator('iframe#ifCotizador').locator('#OcupacionSelectDependiente');
+        await select.selectOption({ label: ocupacion }, { timeout: 10000 });
+        await expect(select).not.toHaveValue('');
+    }
+    async IngresaNumeroIdentificacionConyuge() {
+        const { faker } = await import("@faker-js/faker");
+        const numero = faker.string.numeric(10);
+        const input = this.page.frameLocator('iframe#ifCotizador').locator('#txtNumeroVerificacionDependiente');
+        await expect(input).toBeVisible({ timeout: 15000 });
+        await input.fill(numero);
+        await expect(input).toHaveValue(numero);
+    }
+    async SeleccionaTipoIdentificacionConyuge(tipoIdentificacion: string) {
+        const select = this.page.frameLocator('iframe#ifCotizador').locator('#tipoIDselectDependiente');
+        await select.selectOption({ label: tipoIdentificacion }, { timeout: 10000 });
+        await expect(select).not.toHaveValue('');
+    }
+    async EsVisibleIdentificacionConyuge() {
+        return this.page
+            .frameLocator('iframe#ifCotizador')
+            .locator('#tipoIDselectDependiente')
+            .isVisible();
+    }
+    async SeleccionaPaisExpedicionIdConyuge() {
+        await seleccionarOpcionAleatoriaDesdeLocator(
+            this.page.frameLocator('iframe#ifCotizador').locator('#PaisEmisionSelectDependienteSelect'),
+        );
+    }
+    async SeleccionaPaisResidenciaConyuge() {
+        const select = this.page
+            .frameLocator('iframe#ifCotizador')
+            .locator('#PaisResidenciaSelectDependientes');
+        await expect(select).toBeVisible({ timeout: 15000 });
+        if (await select.isDisabled()) {
+            await expect(select).not.toHaveValue('');
+            return;
+        }
+        await seleccionarOpcionAleatoriaDesdeLocator(select);
+    }
+    async SeleccionaNoEstudianteConyuge() {
+        const iframe = this.page.frameLocator('iframe#ifCotizador');
+        const opcionNo = iframe.locator('#optENO');
+        if (await opcionNo.isVisible()) {
+            await iframe.locator('label.checkbox-design[for="optENO"]').click();
+            await expect(opcionNo).toBeChecked();
+        }
+    }
+    async SeleccionaSiEstudianteDependiente() {
+        const iframe = this.page.frameLocator('iframe#ifCotizador');
+        const opcionSi = iframe.locator('#optESI');
+        if (await opcionSi.isVisible()) {
+            await iframe.locator('label.checkbox-design[for="optESI"]').click();
+            await expect(opcionSi).toBeChecked();
+        }
+    }
     async ClickBtnGuardarHijo() {
-        await this.page.frameLocator('iframe#ifCotizador').locator('#saveDatos').click();
+        const iframe = this.page.frameLocator('iframe#ifCotizador');
+        const botonGuardar = iframe.locator('#saveDatos');
+        await expect(botonGuardar).toBeVisible({ timeout: 15000 });
+        await expect(botonGuardar).toBeEnabled({ timeout: 15000 });
+        await botonGuardar.click({ timeout: 15000 });
         await expect(
-            this.page.frameLocator('iframe#ifCotizador').locator('#ModalAddDependiente')
-        ).toBeHidden({ timeout: 10000 });
+            iframe.locator('#ModalAddDependiente')
+        ).toBeHidden({ timeout: 15000 });
     }
     async ClickBtnCerrarModalDependiente() {
         await this.page.frameLocator('iframe#ifCotizador').locator('#unloadContent').click();

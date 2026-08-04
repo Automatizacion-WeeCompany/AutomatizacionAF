@@ -2,11 +2,11 @@
 
 ## Fuente principal
 
-`src/datos/SuitePruebas.xlsx` es la fuente de los escenarios data-driven. `ExtraerDatosExcel` abre ese archivo y `CargarExcel` convierte la hoja solicitada en una lista de objetos usando la primera fila como encabezado.
+`src/datos/SuitePruebas.xlsx` es la fuente de los escenarios data-driven. Las cotizaciones se generan combinando dos catálogos independientes: configuraciones comerciales y perfiles de personas.
 
 Reglas de activación:
 
-- Solo una fila con `EscenarioPrueba` no vacío crea un test.
+- Solo filas con identificador no vacío participan en la generación.
 - Los nombres de hoja y encabezado son sensibles a cambios de texto.
 - Los valores funcionales se comparan como cadenas y, en varios flows, distinguen mayúsculas, acentos y espacios.
 - Una fila se ejecuta una vez por cada proyecto Playwright seleccionado.
@@ -15,11 +15,61 @@ Reglas de activación:
 
 | Hoja | Estado | Uso |
 |---|---|---|
-| `CotizadorAF` | Activa | Genera escenarios completos del cotizador. |
+| `ConfiguracionesPlan` | Activa | 24 combinaciones válidas de plan, red, deducible y frecuencia. |
+| `PerfilesCotizacion` | Activa | Ocho perfiles: seis familiares y dos individuales. |
+| `CotizadorAF` | Referencia heredada | Conserva los escenarios anteriores, pero los specs actuales ya no la consumen. |
 | `EmisionAF` | Activa | Genera escenarios de emisión Claims. |
 | `Hoja1` | No consumida | Contiene datos sin encabezado reconocido; el spec no la carga. Trátala como referencia hasta decidir su depuración. |
 
-## Hoja `CotizadorAF`
+## Generación de la matriz
+
+`GenerarEscenariosCotizador` calcula `ConfiguracionesPlan × PerfilesCotizacion`.
+Con 24 configuraciones y ocho perfiles se obtienen 192 cotizaciones. Al usar
+Chromium y Firefox, Playwright registra 384 ejecuciones del cotizador. La
+emisión Claims agrega una prueba por navegador.
+
+Antes de registrar los tests se valida:
+
+- cobertura exacta de las seis parejas plan/red y los cuatro deducibles;
+- unicidad de identificadores;
+- cantidad de dependientes coherente con `1`, `2` o `3+`;
+- cónyuge obligatorio en perfiles familiares;
+- consistencia entre `ResultadoEsperado` y `ObjetivoBMI`;
+- ausencia de dependientes en perfiles individuales.
+
+## Hoja `ConfiguracionesPlan`
+
+| Encabezado | Uso |
+|---|---|
+| `ConfiguracionPlan` | Identificador legible y único. |
+| `CotizarPlan` | `Superior`, `Optima` o `Vital`. |
+| `RedProveedores` | Red válida para el plan. |
+| `Deducible` | Texto exacto de la opción de deducible. |
+| `FrecuenciaPago` | Frecuencia configurada para la ejecución. |
+
+Las parejas válidas son Superior–Ultra/Open, Optima–Ultra/Plus y
+Vital–Plus/Core. Cada pareja se combina con los cuatro deducibles admitidos.
+
+## Hoja `PerfilesCotizacion`
+
+Contiene acceso, idioma, composición familiar, datos personales,
+dependientes, cuestionarios y las dos columnas que gobiernan la salida:
+
+| Encabezado | Contrato |
+|---|---|
+| `PerfilCotizacion` | Identificador único del perfil. |
+| `TipoPoliza` | `Familiar` o `Individual`. |
+| `ResultadoEsperado` | `Emision` o `EvaluacionBMI`. |
+| `ObjetivoBMI` | `Ninguno`, `Titular` o `Dependiente1`…`Dependiente5`. |
+
+Los perfiles vigentes son familiar con cónyuge y 1, 2 o 3+ dependientes,
+tanto normales como con el titular objetivo de BMI; además de individual
+normal e individual BMI. Los valores `Dependiente1`…`Dependiente5` siguen
+siendo válidos para capturar estatura y peso fuera de rango, pero no forman
+parte de la matriz activa: su resultado se validará en un flujo adicional
+específico para dependientes.
+
+## Hoja `CotizadorAF` (referencia heredada)
 
 ### Identidad y acceso: A–E
 
@@ -96,16 +146,6 @@ adicional. El código no la presupone por tipo de póliza o idioma: detecta si l
 sección o la confirmación del plan quedó visible y continúa por el destino
 correspondiente.
 
-### Escenarios individuales
-
-La hoja `CotizadorAF` contiene un escenario Individual en español y otro en
-inglés. Se mantienen en la misma hoja porque comparten el contrato de columnas
-y el mismo orquestador; no es necesaria una hoja paralela.
-
-El flow asigna al titular de esos escenarios 180 cm de estatura y 180 kg de
-peso. Estos valores fijos ejercen la ruta fuera de estándar: la solicitud debe
-quedar en evaluación y no debe ofrecer el inicio del proceso de pago.
-
 ### Columnas reservadas o no conectadas
 
 - AJ–AQ no tienen encabezado. No deben usarse como contrato de datos.
@@ -127,14 +167,10 @@ Los folios deben conservarse como identificadores, no como cantidades. Evita for
 
 ## Tipado
 
-`EscenarioExcel` tipa actualmente solo el subconjunto de información personal y dependientes. El lector retorna objetos sin un tipo integral, por lo que un encabezado mal escrito puede llegar hasta tiempo de ejecución.
-
-Mejora recomendada:
-
-1. Crear tipos completos para `CotizadorAF` y `EmisionAF`.
-2. Validar campos obligatorios antes de registrar los tests.
-3. Reportar fila, hoja y campo inválido con un mensaje accionable.
-4. Mantener compatibilidad con los encabezados existentes durante la migración.
+`ConfiguracionPlanExcel`, `PerfilCotizacionExcel` y `EscenarioExcel` tipan los
+tres estados del dato. `ValidarEscenariosExcel` y el generador fallan durante
+el descubrimiento con mensajes de hoja, perfil o configuración cuando el
+contrato no es válido.
 
 ## Contratos de textos
 
@@ -156,15 +192,16 @@ Sustituye estos archivos únicamente por datos sintéticos. Mantén nombre y rut
 
 ## Procedimiento para agregar un escenario
 
-1. Duplica una fila funcionalmente cercana, no toda la hoja.
-2. Cambia `EscenarioPrueba` por un nombre único y descriptivo.
-3. Modifica solo los campos que definen la nueva cobertura.
-4. Verifica que los valores coincidan con opciones reales de la UI.
-5. Cierra Excel y elimina cualquier archivo temporal `~$...`.
-6. Ejecuta `npm run build`.
-7. Ejecuta `npx playwright test --list` y confirma el nuevo conteo.
-8. Corre el escenario por nombre en un solo navegador.
-9. Revisa reporte, video, trace y efectos creados en el ambiente.
+1. Decide si la variación pertenece al eje comercial o al perfil de personas.
+2. Duplica una fila únicamente en la hoja correspondiente.
+3. Asigna un identificador único y descriptivo.
+4. Modifica solo los campos que definen la nueva cobertura.
+5. Verifica que los valores coincidan con opciones reales de la UI.
+6. Cierra Excel y elimina cualquier archivo temporal `~$...`.
+7. Ejecuta `npm run build`.
+8. Ejecuta `npx playwright test --list` y confirma el nuevo conteo.
+9. Corre el escenario por nombre en un solo navegador.
+10. Revisa reporte, video, trace y efectos creados en el ambiente.
 
 ## Seguridad y calidad de datos
 
