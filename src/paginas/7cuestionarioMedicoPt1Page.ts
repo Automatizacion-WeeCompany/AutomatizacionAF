@@ -13,8 +13,12 @@ export class CuestionarioMedicoPt1Page {
     const etiqueta = iframe.locator(`label[for="${idOpcion}"]`).first();
 
     await expect(etiqueta).toBeVisible({ timeout: 30000 });
+    await etiqueta.scrollIntoViewIfNeeded();
     await etiqueta.click();
-    await expect(opcion).toBeChecked();
+    if (!(await opcion.isChecked())) {
+      await opcion.evaluate((elemento: HTMLInputElement) => elemento.click());
+    }
+    await expect(opcion).toBeChecked({ timeout: 10000 });
   }
 
   private async seleccionarPersonaDesdeMenu(
@@ -88,10 +92,23 @@ export class CuestionarioMedicoPt1Page {
     );
   }
   async SubirArchivoFirmaP2() {
-    await this.page
-      .frameLocator("iframe#ifCotizador")
+    const iframe = this.page.frameLocator("iframe#ifCotizador");
+    await iframe
       .locator('input[id^="inputCertificado_"]')
       .setInputFiles("./src/datos/PruebaAF.pdf");
+    await expect(
+      iframe.locator(".archivoCargadoPreviamentecertificado").first(),
+    ).toBeAttached({ timeout: 15000 });
+  }
+
+  async SubirArchivoReciboP2() {
+    const iframe = this.page.frameLocator("iframe#ifCotizador");
+    await iframe
+      .locator('input[id^="inputRecibo_"]')
+      .setInputFiles("./src/datos/PruebaAF.pdf");
+    await expect(
+      iframe.locator(".archivoCargadoPreviamenterecibo").first(),
+    ).toBeAttached({ timeout: 15000 });
   }
 
   async ClickBtnGuardarP2() {
@@ -309,10 +326,26 @@ export class CuestionarioMedicoPt1Page {
       .pressSequentially(descripcionMedicoTratante, { delay: 70 });
   }
   async ClickBtnGuardarMedicoTratante() {
-    await this.page
-      .frameLocator("iframe#ifCotizador")
-      .locator("#btnGuardarEspecialistaMedico")
-      .click();
+    const iframe = this.page.frameLocator("iframe#ifCotizador");
+    const guardadoEspecialista = this.page.waitForResponse(
+      (response) =>
+        response.request().method() === "POST" &&
+        response.url().includes("/API/Cotizador/AddUpdateDetalleMedicoTratante"),
+      { timeout: 30000 },
+    );
+
+    await iframe.locator("#btnGuardarEspecialistaMedico").click();
+    const respuesta = await guardadoEspecialista;
+
+    if (!respuesta.ok()) {
+      throw new Error(
+        `No se pudo guardar el médico tratante: HTTP ${respuesta.status()}`,
+      );
+    }
+
+    await expect(iframe.locator(".divMedicosAdd").first()).toBeAttached({
+      timeout: 30000,
+    });
   }
   //Finalizan preguntas
   async ClickBtnSiguiente() {
@@ -320,7 +353,7 @@ export class CuestionarioMedicoPt1Page {
     await iframe.locator("#GostepTwo").click();
     await expect(
       iframe.locator('label[for="optNoExiste_1"]').nth(0),
-    ).toBeVisible({ timeout: 30000 });
+    ).toBeVisible({ timeout: 90000 });
   }
   async ClickBtnregresar() {
     await this.page

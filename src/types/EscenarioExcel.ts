@@ -1,8 +1,19 @@
 export type IdiomaCotizacionExcel = "Esp" | "Eng" | "Port";
 export type TipoPolizaExcel = "Familiar" | "Individual";
+export type ResultadoEsperadoCotizacion = "Emision" | "EvaluacionBMI";
+export type ObjetivoBMI =
+    | "Ninguno"
+    | "Titular"
+    | "Dependiente1"
+    | "Dependiente2"
+    | "Dependiente3"
+    | "Dependiente4"
+    | "Dependiente5";
 
 export interface EscenarioExcel {
     EscenarioPrueba: string;
+    PerfilCotizacion: string;
+    ConfiguracionPlan: string;
     Url: string;
     IdiomaCotizacion: IdiomaCotizacionExcel;
     CorreoInicio: string;
@@ -14,6 +25,8 @@ export interface EscenarioExcel {
     RedProveedores: string;
     Deducible: string;
     FrecuenciaPago: string;
+    ResultadoEsperado: ResultadoEsperadoCotizacion;
+    ObjetivoBMI: ObjetivoBMI;
 
     SexoAlNacer: string;
     EstadoCivil: string;
@@ -41,4 +54,31 @@ export interface EscenarioExcel {
     P5Sustancia: string;
     SigueIngiriendo: string;
     CapturaPreguntasPt2: string;
+}
+
+export interface ConfiguracionPlanExcel {
+    ConfiguracionPlan: string;
+    CotizarPlan: string;
+    RedProveedores: string;
+    Deducible: string;
+    FrecuenciaPago: string;
+}
+
+export interface PerfilCotizacionExcel
+    extends Omit<
+        EscenarioExcel,
+        | "EscenarioPrueba"
+        | "ConfiguracionPlan"
+        | "CotizarPlan"
+        | "RedProveedores"
+        | "Deducible"
+        | "FrecuenciaPago"
+    > {}
+
+export interface EscenarioEmisionExcel {
+    EscenarioPrueba: string;
+    CorreoClaims: string;
+    ContrasenaClaims: string | number;
+    UrlClaims: string;
+    FolioSolicitante: string | number;
 }

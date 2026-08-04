@@ -118,6 +118,12 @@ export class ModalSecureCheckoutPage {
         return this.frameAplicacion.frameLocator('iframe#__mce');
     }
 
+    private get botonConfirmarPago() {
+        return this.frameCheckout.getByRole('button', {
+            name: /Confirm and Continue|Confirmar y continuar|Confirmar e continuar/i,
+        });
+    }
+
     private async clickContinuarEtapa() {
         const botonContinuar = this.frameCheckout.locator('button[type="submit"]:visible');
         await expect(botonContinuar).toBeVisible({ timeout: 30000 });
@@ -173,16 +179,13 @@ export class ModalSecureCheckoutPage {
 
     async ClickBtnContinuarDatosTarjeta() {
         await this.clickContinuarEtapa();
-        await expect(
-            this.frameCheckout.locator('button[type="submit"]:visible'),
-        ).toBeVisible({ timeout: 30000 });
+        await expect(this.botonConfirmarPago).toBeVisible({ timeout: 30000 });
     }
 
     async ClickBtnConfirmarYContinuar() {
-        const botonConfirmar = this.frameCheckout.locator(
-            'button[type="submit"]:visible',
-        );
-        await botonConfirmar.click();
+        const botonConfirmar = this.botonConfirmarPago;
+        await expect(botonConfirmar).toBeEnabled({ timeout: 30000 });
+        await botonConfirmar.evaluate((boton: HTMLButtonElement) => boton.click());
 
         await expect(this.frameAplicacion.locator('#redirectionModal')).toBeVisible({
             timeout: 60000,

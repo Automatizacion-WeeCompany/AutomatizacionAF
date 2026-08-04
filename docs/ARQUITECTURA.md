@@ -10,7 +10,11 @@ No se propone una refactorización total. Toda extensión debe reutilizar las ca
 
 ```mermaid
 flowchart TD
-    X["SuitePruebas.xlsx"] --> L["CargaDatosExcel / ObtencionDeDatos"]
+    X["SuitePruebas.xlsx"] --> CP["ConfiguracionesPlan"]
+    X --> PC["PerfilesCotizacion"]
+    CP --> G["GenerarEscenariosCotizador"]
+    PC --> G
+    G --> L["ObtencionDeDatos"]
     L --> S["Specs Playwright"]
     S --> F["Flows de negocio"]
     F --> P["Page Objects"]
@@ -28,11 +32,11 @@ flowchart TD
 
 Responsabilidad:
 
-- Convertir cada fila activa de Excel en un test.
+- Convertir cada escenario generado desde Excel en un test.
 - Instanciar y llamar flows en el orden del escenario.
 - Seleccionar el alcance funcional del caso.
 
-No deben contener selectores, generación detallada de datos ni lógica extensa de pantalla. El spec actual contiene los recorridos de Cotizador AF y Emisión Claims AF en un solo archivo; separarlos es una mejora futura, no un requisito para extender un caso existente.
+No deben contener selectores, generación detallada de datos ni lógica extensa de pantalla. Los recorridos están separados en `cotizacionesFamiliaresAF.spec.ts`, `cotizacionesIndividualesAF.spec.ts` y `emisionClaimsAF.spec.ts`.
 
 ### Flows: `src/flows/`
 
@@ -69,10 +73,10 @@ El `playwright.config.ts` de la raíz es el punto de entrada y reexporta la conf
 
 ### Datos y contratos
 
-- `src/datos/SuitePruebas.xlsx`: escenarios data-driven.
+- `src/datos/SuitePruebas.xlsx`: catálogos data-driven de configuraciones y perfiles.
 - `src/datos/PruebaAF.pdf` y `src/datos/Firma.png`: adjuntos usados por los recorridos.
 - `src/textosEsperados/`: listas de textos que actúan como contrato de contenido.
-- `src/types/EscenarioExcel.ts`: tipado parcial de datos personales.
+- `src/types/EscenarioExcel.ts`: contratos de configuración, perfil y escenario generado.
 
 Consulta [Datos de prueba](DATOS-DE-PRUEBA.md) para el contrato detallado.
 
@@ -114,14 +118,21 @@ flowchart LR
 
 El flujo genera datos personales sintéticos para varios campos y toma del Excel las decisiones funcionales que cambian el camino.
 
-Las pólizas `Individual` y `Familiar` comparten login, planes, datos del
-titular, beneficiario, cuestionarios y aceptación. La variante individual
-omite las columnas de cónyuge e hijos y usa 180 cm / 180 kg para ejercer la
-ruta fuera de estándar: después de las firmas valida el mensaje de evaluación
-y confirma que los controles de pago no aparezcan. Después de las 18 preguntas
-de antecedentes médicos, el flow espera uno de dos destinos observables:
-confirmación del plan o la sección médica adicional. Esta última se responde
-solo cuando la aplicación la muestra para los solicitantes capturados.
+Las pólizas `Individual` y `Familiar` tienen un flow superior propio y delegan
+el recorrido común a `CotizacionAFBaseFlow`. El resultado no se deduce del tipo
+de póliza: `ResultadoEsperado` define `Emision` o `EvaluacionBMI`, mientras
+`ObjetivoBMI` indica si los datos fuera de rango pertenecen al titular o a un
+dependiente. En la matriz vigente, toda `EvaluacionBMI` se provoca en el
+titular, incluso en pólizas familiares. El soporte para aplicar los datos BMI
+a un hijo permanece disponible, pero su resultado corresponde a un flujo
+adicional de dependientes. Los casos familiares agregan el cónyuge y procesan
+de uno a cinco dependientes mediante el mismo ciclo reutilizable.
+
+Después de las preguntas médicas, el flow detecta el destino observable. Una
+emisión continúa hasta pago y registra la póliza; una evaluación BMI valida el
+mensaje contractual por idioma y que no se habilite el proceso de pago. En
+inglés, el mensaje esperado es `The application will be evaluated, and a
+notification will be sent via email once a decision has been made.`
 
 ### Emisión Claims AF
 
@@ -135,11 +146,11 @@ La implementación actual lee información del solicitante y la registra en cons
 
 ## Flujo de datos
 
-1. Playwright importa el spec durante el descubrimiento.
-2. `ExtraerDatosExcel.obtenerEscenariosPorHoja()` abre `SuitePruebas.xlsx`.
-3. `CargarExcel` transforma la hoja en objetos usando la fila de encabezados.
-4. Solo las filas con `EscenarioPrueba` no vacío se convierten en tests.
-5. El spec pasa valores a los flows.
+1. Playwright importa los specs durante el descubrimiento.
+2. `ExtraerDatosExcel.obtenerEscenariosCotizador()` abre `SuitePruebas.xlsx`.
+3. `CargarExcel` transforma `ConfiguracionesPlan` y `PerfilesCotizacion` en objetos.
+4. `GenerarEscenariosCotizador` valida ambos catálogos y calcula su producto cartesiano.
+5. Los specs filtran los escenarios generados por `TipoPoliza` y los pasan al flow correspondiente.
 6. Los flows interpretan cadenas como `Esp`, `Familiar`, `Individual`, `Si`, plan, red y frecuencia.
 7. Los Page Objects ejecutan acciones en la interfaz.
 8. Playwright captura evidencias conforme a la configuración.
@@ -149,8 +160,8 @@ La implementación actual lee información del solicitante y la registra en cons
 1. Verificar si el Page Object y el flow ya existen.
 2. Agregar o reutilizar una acción UI en `src/paginas/`.
 3. Orquestar la nueva conducta en `src/flows/`.
-4. Ampliar `EscenarioExcel` si el flow consume una columna nueva.
-5. Añadir la columna o fila en Excel sin alterar encabezados vigentes.
+4. Ampliar los contratos de `EscenarioExcel` si el flow consume una columna nueva.
+5. Añadir la configuración o perfil al catálogo correcto sin duplicar el otro eje.
 6. Actualizar contratos JSON si cambia contenido visible.
 7. Mantener el spec como orquestador.
 8. Ejecutar compilación, descubrimiento y el recorrido focalizado.
