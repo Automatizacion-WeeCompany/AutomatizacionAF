@@ -5,9 +5,10 @@ Framework de automatización web end-to-end para los procesos de American Fideli
 ## Alcance actual
 
 - Cotizador AF: matriz de 192 cotizaciones familiares e individuales, separada en perfiles reutilizables y combinaciones de plan/red/deducible; valida emisión o evaluación BMI según el objetivo del caso.
-- Emisión Claims AF: inicio de sesión, búsqueda de una solicitud por folio y recorrido de las secciones de emisión.
+- Emisión Claims AF: genera la póliza con los flujos del cotizador, conserva los datos capturados, abre esa misma póliza en Emisión, atiende la solicitud y compara las siete pestañas de Claims.
 - Validación de textos por idioma a partir de archivos JSON.
 - Evidencias Playwright: reporte HTML, video, captura y trace según la política configurada.
+- Evidencia JSON inmutable por cada comparación en `Evidencias/comparaciones-datos/<póliza>/`.
 - Utilidades para registrar y consolidar datos de pólizas en Excel; su integración completa con el flujo aún está pendiente.
 
 ## Tecnologías

@@ -1,0 +1,87 @@
+name: Pruebas automatizadas E2E
+
+on:
+  # Permite ejecutar las pruebas manualmente desde GitHub.
+  workflow_dispatch:
+    inputs:
+      ambiente:
+        description: Ambiente donde se ejecutarán las pruebas
+        required: true
+        default: qa
+        type: choice
+        options:
+          - qa
+          - staging
+          - produccion
+
+  # Ejecuta las pruebas de lunes a viernes a las 02:00.
+  schedule:
+    - cron: "0 2 * * 1-5"
+      timezone: "America/Mexico_City"
+
+  # Ejecuta las pruebas cuando se actualice main.
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pruebas-e2e-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  pruebas-e2e:
+    name: Ejecutar Playwright
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    env:
+      CI: "true"
+      AMBIENTE: ${{ inputs.ambiente || 'qa' }}
+      BASE_URL_QA: ${{ vars.BASE_URL_QA }}
+      BASE_URL_STAGING: ${{ vars.BASE_URL_STAGING }}
+      BASE_URL_PRODUCCION: ${{ vars.BASE_URL_PRODUCCION }}
+      TEST_USERNAME: ${{ secrets.TEST_USERNAME }}
+      TEST_PASSWORD: ${{ secrets.TEST_PASSWORD }}
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v6
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Instalar navegadores de Playwright
+        run: npx playwright install --with-deps
+
+      - name: Mostrar ambiente seleccionado
+        run: echo "Ejecutando pruebas en el ambiente $AMBIENTE"
+
+      - name: Ejecutar pruebas
+        run: npm run test:e2e
+
+      - name: Guardar reporte de Playwright
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v5
+        with:
+          name: reporte-playwright-${{ github.run_number }}
+          path: playwright-report/
+          retention-days: 30
+          if-no-files-found: warn
+
+      - name: Guardar evidencias
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v5
+        with:
+          name: evidencias-${{ github.run_number }}
+          path: test-results/
+          retention-days: 15
+          if-no-files-found: ignore
