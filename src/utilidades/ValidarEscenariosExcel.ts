@@ -704,7 +704,6 @@ function validarEmision(registros: RegistroExcel[]) {
     'CorreoClaims',
     'ContrasenaClaims',
     'UrlClaims',
-    'FolioSolicitante',
   ];
 
   registros.forEach((registro, indice) => {

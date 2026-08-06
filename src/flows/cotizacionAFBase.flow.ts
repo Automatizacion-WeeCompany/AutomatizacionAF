@@ -2,6 +2,10 @@ import { Page } from "@playwright/test";
 import { guardarLogPoliza } from "../utilidades/LogPolizas";
 import { EscenarioExcel } from "../types/EscenarioExcel";
 import {
+  ContextoDatosCotizacion,
+  DatosCotizacionGuardados,
+} from "../utilidades/ContextoDatosCotizacion";
+import {
   HomeAFFlow,
   InicioSesionAFFlow,
   IniciarCotizacionFlow,
@@ -26,6 +30,7 @@ export type ResultadoEjecucionCotizacion =
       resultado: "Emision";
       nombreTitular: string;
       numeroPoliza: string;
+      datosCotizacion: DatosCotizacionGuardados;
     };
 
 export class CotizacionAFBaseFlow {
@@ -45,6 +50,7 @@ export class CotizacionAFBaseFlow {
   private readonly pasoOnceAplicacionCompleta: PasoOnceAplicacionCompletaFlow;
   private readonly pasoDoceRegistrarInformacionPago: PasoDoceRegistrarInformacionPagoFlow;
   private readonly pasoTreceMetodoPago: PasoTreceMetodoPagoFlow;
+  private readonly contextoDatosCotizacion: ContextoDatosCotizacion;
 
   constructor(page: Page) {
     this.inicioSesionAF = new InicioSesionAFFlow(page);
@@ -66,12 +72,14 @@ export class CotizacionAFBaseFlow {
     this.pasoDoceRegistrarInformacionPago =
       new PasoDoceRegistrarInformacionPagoFlow(page);
     this.pasoTreceMetodoPago = new PasoTreceMetodoPagoFlow(page);
+    this.contextoDatosCotizacion = new ContextoDatosCotizacion(page);
   }
 
   async ejecutar(
     escenario: EscenarioExcel,
     numeroFlujo: number,
   ): Promise<ResultadoEjecucionCotizacion> {
+    await this.contextoDatosCotizacion.preparar();
     await this.inicioSesionAF.paginaInicio(escenario.Url);
     await this.inicioSesionAF.iniciarSesionAF(
       escenario.IdiomaCotizacion,
@@ -82,6 +90,7 @@ export class CotizacionAFBaseFlow {
     await this.iniciarCotizacion.iniciarCotizacion(
       escenario.IdiomaCotizacion,
     );
+    this.contextoDatosCotizacion.activar();
 
     const { edadTitular, edadConyuge } =
       await this.pasoUnoDatosPersonales.CapturaDatosPersonales(
@@ -146,6 +155,10 @@ export class CotizacionAFBaseFlow {
     const confirmacion = await this.pasoTreceMetodoPago.CapturarMetodoPago(
       escenario.IdiomaCotizacion,
     );
+    const datosCotizacion = await this.contextoDatosCotizacion.guardar(
+      escenario,
+      confirmacion,
+    );
     await guardarLogPoliza({
       numeroFlujo,
       escenario: `${escenario.EscenarioPrueba} ${escenario.IdiomaCotizacion}`,
@@ -157,6 +170,7 @@ export class CotizacionAFBaseFlow {
       resultado: "Emision",
       nombreTitular: confirmacion.nombreTitular,
       numeroPoliza: confirmacion.numeroPoliza,
+      datosCotizacion,
     };
   }
 }

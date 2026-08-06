@@ -136,13 +136,16 @@ notification will be sent via email once a decision has been made.`
 
 ### Emisión Claims AF
 
-1. Navega a la URL proporcionada por la hoja `EmisionAF`.
-2. Inicia sesión.
-3. Abre Emisión.
-4. Localiza la cotización por folio.
-5. Recorre Información general, Coberturas, Cuestionario, Plan y frecuencia, Idioma, Limitaciones y Contrato.
+1. Reutiliza el flow Familiar o Individual para generar una póliza por cada escenario cuyo resultado esperado sea `Emision`.
+2. Conserva en memoria la configuración del escenario, los valores reales escritos o seleccionados y la confirmación con el número de póliza.
+3. Navega a la URL de Claims proporcionada por la hoja `EmisionAF` e inicia sesión.
+4. Abre explícitamente la ruta `#/Emision`.
+5. Busca la póliza recién generada y abre su fila.
+6. Pulsa `Atender solicitud` y espera que se active el proceso.
+7. Recorre y compara Información general, Coberturas, Cuestionario, Plan y frecuencia, Idioma, Limitaciones y Contrato.
+8. Guarda un JSON independiente por ejecución, incluso si existe una diferencia o se interrumpe la lectura de una pestaña.
 
-La implementación actual lee información del solicitante y la registra en consola, pero no la compara con un resultado esperado tipado.
+El comparador conserva el valor esperado, el obtenido, su origen en ambas aplicaciones y un estado por campo. Los datos no capturados se marcan como `NoComparable`; no se convierten silenciosamente en coincidencias. Al final agrega resúmenes por pestaña y de toda la póliza.
 
 ## Flujo de datos
 

@@ -107,7 +107,12 @@ export class InformacionPersonalPage {
     async IngresaNumeroCelularSecundario() {
         const { faker } = await import("@faker-js/faker");
         const NumeroCelularTitular = faker.phone.number({ style: "national" }).toString();
-        await this.page.frameLocator('iframe#ifCotizador').locator('#txtCelularSecondary').evaluate((el, value) => { (el as HTMLInputElement).value = value; }, NumeroCelularTitular.toString());
+        await this.page.frameLocator('iframe#ifCotizador').locator('#txtCelularSecondary').evaluate((el, value) => {
+            const input = el as HTMLInputElement;
+            input.value = value;
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+            input.dispatchEvent(new Event('change', { bubbles: true }));
+        }, NumeroCelularTitular.toString());
     }
     async SeleccionaPaisTelefonoSecundario() {
         await this.page.frameLocator('iframe#ifCotizador').locator('.iti__selected-country-primary').first().click();

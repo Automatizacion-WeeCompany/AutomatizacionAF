@@ -9,12 +9,12 @@ La suite debe demostrar que los recorridos críticos de AF y Claims avanzan por 
 | Área | Cobertura actual | Fuente de escenarios |
 |---|---|---|
 | Cotizador AF | 192 escenarios familiares e individuales, con emisión o evaluación BMI. | `ConfiguracionesPlan × PerfilesCotizacion`. |
-| Emisión Claims AF | Login, búsqueda por folio y recorrido de secciones. | Hoja `EmisionAF`. |
+| Emisión Claims AF | Cotización integrada, captura de datos, atención de la solicitud y comparación de las siete pestañas de la póliza generada. | Matriz del cotizador + hoja `EmisionAF`. |
 | Idiomas | Selección de Esp/Eng/Port; contratos JSON completos solo en parte. | Excel + JSON. |
 | Navegadores | Chromium y Firefox. | Proyectos Playwright. |
 | Evidencias | Lista, HTML, video, screenshot y trace. | Configuración Playwright. |
 
-El 3 de agosto de 2026, Playwright descubrió 386 tests: 192 escenarios de Cotizador y uno de Emisión, repetidos en dos navegadores. Este número es una fotografía; usa `npx playwright test --list` como fuente actual.
+El 4 de agosto de 2026, Playwright descubrió 576 tests: 192 escenarios de Cotizador y 96 recorridos integrados de Emisión, repetidos en dos navegadores. Este número es una fotografía; usa `npx playwright test --list` como fuente actual.
 
 ## Tipos de validación vigentes
 
@@ -23,14 +23,17 @@ El 3 de agosto de 2026, Playwright descubrió 386 tests: 192 escenarios de Cotiz
 - Presencia de placeholders configurados.
 - Visibilidad de secciones y modales.
 - Selección de opciones y llenado de formularios.
-- Recorrido de pestañas de la solicitud en Claims.
+- Apertura en Claims de la misma póliza generada por el cotizador.
+- Activación mediante `Atender solicitud` antes de leer los datos de emisión.
+- Comparación campo a campo en Información general, Coberturas, Cuestionario, Plan y frecuencia, Idioma, Limitaciones y Contrato.
+- Registro JSON por ejecución con estados `Coincide`, `Diferente` y `NoComparable`, además de resúmenes por pestaña.
+- Registro del avance parcial y la etapa cuando una sección no puede leerse.
 - Errores explícitos para valores de datos no soportados en varias ramas.
 - Resultado explícito de emisión o evaluación BMI y objetivo antropométrico trazable.
 - En la matriz activa, la evaluación BMI se espera únicamente cuando el objetivo es el titular; BMI de dependientes queda reservado para un flujo adicional.
 
 ## Brechas actuales
 
-- El flujo Claims registra datos en consola, pero no compara valores esperados.
 - No hay pruebas unitarias para lectores, validadores o mapeos de Excel.
 - No hay pruebas de API, accesibilidad o visual regression.
 - No existe pipeline CI versionado.

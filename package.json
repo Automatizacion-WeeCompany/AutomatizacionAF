@@ -10,7 +10,8 @@
     "clean": "rd /s /q dist && rd /s /q test-results && rd /s /q node_modules",
     "build": "npx tsc --noEmit",
     "merge-polizas": "ts-node src/utilidades/consolidarReportesPolizas.ts",
-    "test:full": "playwright test && npm run merge-polizas"
+    "test:full": "playwright test && npm run merge-polizas",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@faker-js/faker": "^10.0.0",
