@@ -80,5 +80,6 @@ export interface EscenarioEmisionExcel {
     CorreoClaims: string;
     ContrasenaClaims: string | number;
     UrlClaims: string;
-    FolioSolicitante: string | number;
+    /** @deprecated La emisión usa ahora la póliza generada por el cotizador. */
+    FolioSolicitante?: string | number;
 }

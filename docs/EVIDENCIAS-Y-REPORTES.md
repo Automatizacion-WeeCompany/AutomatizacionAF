@@ -29,6 +29,22 @@ npx playwright show-report Evidencias/reportes
 
 Artefactos por test, como trace, video, screenshot y contexto de error. Es una salida temporal y está ignorada por Git.
 
+### `Evidencias/comparaciones-datos/`
+
+Cada comparación de Emisión Claims genera un archivo inmutable en:
+
+```text
+Evidencias/comparaciones-datos/<numero-poliza>/<fecha>-<pid>-<consecutivo>.json
+```
+
+El archivo contiene identificador y fecha de ejecución, escenario, póliza, estado global, resumen, las siete pestañas y el detalle de cada campo (`esperado`, `obtenido`, estado y fuentes). Los estados globales son:
+
+- `Exitosa`: no se encontraron diferencias.
+- `ConDiferencias`: uno o más valores comparables no coinciden.
+- `Error`: la lectura se interrumpió; se conserva lo comparado hasta ese momento y la etapa que falló.
+
+Los campos sin valor capturado se registran como `NoComparable` y permanecen visibles en el resumen. Esta ruta está ignorada por Git.
+
 ### `src/textosEsperados/textosFaltantes/`
 
 Resultados JSON de validaciones de contenido. El nombre incluye pantalla/idioma y fecha. La función agrega resultados si el archivo del día ya existe.
@@ -83,6 +99,7 @@ La política definitiva debe alinearse con protección de datos y capacidad de a
 ## Reglas de seguridad
 
 - No adjuntar reportes sin revisar usuarios, folios, documentos y datos personales.
+- Tratar los JSON de comparación como datos sensibles: pueden contener nombres, teléfonos, correos, identificadores y direcciones sintéticas del ambiente de prueba.
 - No publicar artefactos en repositorios o canales públicos.
 - Restringir acceso y expiración en CI.
 - Evitar registrar contraseñas, tokens o contenido de documentos.

@@ -161,9 +161,9 @@ correspondiente.
 | B | `CorreoClaims` | Usuario de prueba de Claims. |
 | C | `ContrasenaClaims` | Credencial de prueba. |
 | D | `UrlClaims` | Página inicial de Emisión. |
-| E | `FolioSolicitante` | Folio usado para localizar la solicitud. |
+| E | `FolioSolicitante` | Campo legado opcional; el flujo usa la póliza recién generada por el cotizador. |
 
-Los folios deben conservarse como identificadores, no como cantidades. Evita formatos que agreguen decimales o notación científica.
+La hoja aporta únicamente la configuración de acceso a Claims. Cada escenario de resultado `Emision` genera y conserva su propio número de póliza antes de ingresar al módulo.
 
 ## Tipado
 
