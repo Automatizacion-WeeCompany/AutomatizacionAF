@@ -11,7 +11,7 @@
     "build": "npx tsc --noEmit",
     "merge-polizas": "ts-node src/utilidades/consolidarReportesPolizas.ts",
     "test:full": "playwright test && npm run merge-polizas",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test --config=src/configuraciones/playwright.config.ts"
   },
   "dependencies": {
     "@faker-js/faker": "^10.0.0",

@@ -78,7 +78,7 @@ jobs:
           if-no-files-found: warn
 
       - name: Guardar evidencias
-        if: ${{ failure() }}
+        if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v5
         with:
           name: evidencias-${{ github.run_number }}
