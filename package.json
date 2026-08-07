@@ -7,6 +7,8 @@
     "test": "NODE_NO_WARNINGS=1 npx playwright test",
     "test:ui": "NODE_NO_WARNINGS=1 npx playwright test --ui",
     "test:headless": "NODE_NO_WARNINGS=1 npx playwright test --headed=false",
+    "test:ci": "CI=1 NODE_NO_WARNINGS=1 playwright test --config=playwright.ci.config.ts",
+    "test:ci:list": "CI=1 NODE_NO_WARNINGS=1 playwright test --config=playwright.ci.config.ts --list",
     "clean": "rd /s /q dist && rd /s /q test-results && rd /s /q node_modules",
     "build": "npx tsc --noEmit",
     "merge-polizas": "ts-node src/utilidades/consolidarReportesPolizas.ts",

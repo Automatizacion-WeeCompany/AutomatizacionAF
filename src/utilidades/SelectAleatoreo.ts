@@ -1,8 +1,9 @@
 import { Page, Locator, expect } from '@playwright/test';
+import { registrarInfo } from './LoggerPruebas';
 
 export async function seleccionarOpcionAleatoria(page: Page, selector: string): Promise<{ value: string; text: string }> {
 
-  console.log(`${selector}`);
+  registrarInfo(`${selector}`);
 
   const opciones = await page.$$eval(`${selector} option`, options => {
     return Array.from(options)
@@ -11,7 +12,7 @@ export async function seleccionarOpcionAleatoria(page: Page, selector: string): 
         text: option.textContent?.trim() || ''
       }));
   });
-  console.log(opciones);
+  registrarInfo(opciones);
   const opcionesValidas = opciones.filter(o => o.value !== ''
     && o.text !== 'Seleccione una opción'
     && o.text !== 'Selecciona una opcion'
@@ -27,17 +28,17 @@ export async function seleccionarOpcionAleatoria(page: Page, selector: string): 
     && o.text !== 'Año'
     && o.text !== 'valorxxxxx');
 
-  console.log(opcionesValidas);
+  registrarInfo(opcionesValidas);
 
   if (opcionesValidas.length === 0) {
-    console.log(`❌ No hay opciones válidas en el selector: ${selector}`);
+    registrarInfo(`❌ No hay opciones válidas en el selector: ${selector}`);
   }
 
   const indiceAleatorio = Math.floor(Math.random() * opcionesValidas.length);
   const opcionSeleccionada = opcionesValidas[indiceAleatorio];
 
   await page.selectOption(selector, opcionSeleccionada.value);
-  console.log(`✅ Opción seleccionada para ${selector}: ${opcionSeleccionada.text}`);
+  registrarInfo(`✅ Opción seleccionada para ${selector}: ${opcionSeleccionada.text}`);
 
   return opcionSeleccionada;
 }
@@ -56,14 +57,14 @@ export async function seleccionarOpcionAleatoriaOriginal(page: Page, selector: s
   const opcionesValidas = opciones.filter(o => o.text !== '' && o.text !== 'Colonia' && o.text != 'Sexo' && o.text !== 'Mes' && o.text != 'Dia' && o.text != 'Parentesco' && o.text != 'Estado civil');
 
   if (opcionesValidas.length === 0) {
-    console.log(`❌ No hay opciones válidas en el selector: ${selector}`);
+    registrarInfo(`❌ No hay opciones válidas en el selector: ${selector}`);
   }
 
   const indiceAleatorio = Math.floor(Math.random() * opcionesValidas.length);
   const opcionSeleccionada = opcionesValidas[indiceAleatorio];
 
   await page.selectOption(selector, opcionSeleccionada.value);
-  console.log(`✅ Opción seleccionada para ${selector}: ${opcionSeleccionada.text}`);
+  registrarInfo(`✅ Opción seleccionada para ${selector}: ${opcionSeleccionada.text}`);
 
   return opcionSeleccionada;
 }
@@ -80,7 +81,7 @@ export async function seleccionarAnoMayor18(page: Page, selector: string) {
   const anoAUsar = opciones[0]; // El más reciente permitido
   await page.selectOption(selector, anoAUsar);
 
-  console.log("✅ Año seleccionado:", anoAUsar);
+  registrarInfo("✅ Año seleccionado:", anoAUsar);
 }
 
 
@@ -168,7 +169,7 @@ export async function seleccionarOpcionAleatoriaDesdeLocator(
 
   await selectLocator.selectOption(opcionSeleccionada.value);
 
-  console.log(`✅ Opción seleccionada: ${opcionSeleccionada.text}`);
+  registrarInfo(`✅ Opción seleccionada: ${opcionSeleccionada.text}`);
 
   return opcionSeleccionada;
 }

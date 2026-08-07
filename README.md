@@ -42,6 +42,15 @@ La ejecución completa abre navegadores por defecto y opera sobre sistemas exter
 npm test
 ```
 
+CI/CD dispone de una variante smoke independiente. Ejecuta cuatro recorridos representativos únicamente en Chromium y usa salida compacta:
+
+```bash
+npm run test:ci:list
+npm run test:ci
+```
+
+La suite completa continúa disponible localmente; la selección CI está centralizada en `src/configuraciones/escenariosCI.ts`. Los mensajes informativos se conservan en local y se silencian en CI. Para investigar una corrida remota puede habilitarse temporalmente `CI_VERBOSE=1`.
+
 Comandos útiles:
 
 ```bash
@@ -60,8 +69,11 @@ npx playwright test src/tests/cotizacionesFamiliaresAF.spec.ts --project=Chromiu
 # Interfaz de Playwright
 npm run test:ui
 
+# Smoke controlado de CI/CD
+npm run test:ci
+
 # Ver el último reporte HTML
-npx playwright show-report Evidencias/reportes
+npx playwright show-report playwright-report
 ```
 
 La configuración actual usa un worker, aun cuando `fullyParallel` está habilitado. Los proyectos se llaman exactamente `Chromium` y `Firefox`.

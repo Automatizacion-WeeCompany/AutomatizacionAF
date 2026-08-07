@@ -127,6 +127,7 @@ import { Page } from '@playwright/test';
 import ExcelJS from 'exceljs';
 import path from 'path';
 import fs from 'fs';
+import { registrarInfo } from './LoggerPruebas';
 
 // ------------------------------
 // 1. Extraer datos de la pantalla
@@ -200,9 +201,9 @@ export async function guardarExcelConfirmacionHistorico(
     const fecha = ahora.toLocaleDateString('es-MX');
     const hora = ahora.toLocaleTimeString('es-MX');
 
-    console.log('🧾 Escribiendo productos:', data.productos);
-    console.log('🧾 Escribiendo polizas:', data.polizas);
-    console.log('🧾 Escribiendo folios:', data.folios);
+    registrarInfo('🧾 Escribiendo productos:', data.productos);
+    registrarInfo('🧾 Escribiendo polizas:', data.polizas);
+    registrarInfo('🧾 Escribiendo folios:', data.folios);
 
     const total = data.productos.length;
 
@@ -217,9 +218,8 @@ export async function guardarExcelConfirmacionHistorico(
     }
 
     await workbook.xlsx.writeFile(rutaExcel);
-    console.log(`📄 Excel del worker ${workerId} actualizado correctamente: ${rutaExcel}`);
+    registrarInfo(`📄 Excel del worker ${workerId} actualizado correctamente: ${rutaExcel}`);
 }
-
 
 
 

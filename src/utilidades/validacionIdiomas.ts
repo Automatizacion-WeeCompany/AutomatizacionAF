@@ -1,6 +1,7 @@
 import { expect, Page } from '@playwright/test';
 import { VALIDACIONES_PANTALLA } from '../configuraciones/validacionesPantallas';
 import { GeneradorDatos } from './GeneradorDatos';
+import { registrarInfo } from './LoggerPruebas';
 import { ValidarTextos } from './ValidarTextosPagina';
 
 export type Idioma = 'Esp' | 'Eng' | 'Port';
@@ -79,7 +80,7 @@ export async function validarPantallaPorIdioma({
         throw new Error(`Idioma ${idioma} no configurado para pantalla ${pantalla}`);
     }
 
-    console.log(`🧪 Validando pantalla "${pantalla}" en idioma "${idioma}"`);
+    registrarInfo(`🧪 Validando pantalla "${pantalla}" en idioma "${idioma}"`);
 
     const textoListo = configPantalla.textoListo[idioma];
     const body = configPantalla.iframeSelector
@@ -125,7 +126,7 @@ export async function validarPantallaPorIdioma({
             : page.locator(placeholder.selector);
         const visible = await locator.isVisible();
 
-        console.log(`🔎 Placeholder ${placeholder.nombre}: ${visible}`);
+        registrarInfo(`🔎 Placeholder ${placeholder.nombre}: ${visible}`);
 
         if (!visible) {
             faltantes.push(placeholder.nombre);
@@ -145,6 +146,6 @@ export async function validarPantallaPorIdioma({
             `PlaceholdersFaltantes_${pantalla}_${idioma}`
         );
     } else {
-        console.log(`✅ Todos los placeholders visibles en ${pantalla}`);
+        registrarInfo(`✅ Todos los placeholders visibles en ${pantalla}`);
     }
 }

@@ -3,6 +3,7 @@ import {
   esperarOpcionesEnSelect,
   seleccionarOpcionAleatoriaDesdeLocator,
 } from "src/utilidades/SelectAleatoreo";
+import { registrarInfo } from "../utilidades/LoggerPruebas";
 
 export class CuestionarioMedicoPt1Page {
   constructor(private readonly page: Page) {}
@@ -38,7 +39,7 @@ export class CuestionarioMedicoPt1Page {
           throw new Error("No hay personas disponibles para seleccionar");
         }
         const randomIndex = Math.floor(Math.random() * total);
-        console.log(`Opcion seleccionada: ${randomIndex}`);
+        registrarInfo(`Opcion seleccionada: ${randomIndex}`);
         await opciones.nth(randomIndex).click();
         return;
       } catch (error) {

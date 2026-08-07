@@ -1,5 +1,6 @@
 import { Page, Frame } from '@playwright/test';
 import * as fs from 'fs';
+import { registrarInfo } from './LoggerPruebas';
 
 export type ValidacionResultado = { estado: 'Éxito' | 'Faltan textos'; faltantes: string[]; fecha: string; };
 
@@ -35,7 +36,7 @@ export class ValidarTextos {
       fecha: new Date().toISOString()
     };
 
-    console.log('Resultado de validación:', resultado);
+    registrarInfo('Resultado de validación:', resultado);
     return resultado;
   }
 

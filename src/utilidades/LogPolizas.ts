@@ -1,5 +1,6 @@
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { registrarInfo } from "./LoggerPruebas";
 
 export interface DatosLogPoliza {
   numeroFlujo: number;
@@ -86,7 +87,7 @@ async function guardarRegistro(
   await writeFile(rutaTemporal, contenido, "utf8");
   await rename(rutaTemporal, rutaArchivo);
 
-  console.log(`Póliza guardada en ${rutaArchivo}: ${registro.poliza}`);
+  registrarInfo(`Póliza guardada en ${rutaArchivo}: ${registro.poliza}`);
   return registro;
 }
 

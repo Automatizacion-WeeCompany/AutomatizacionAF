@@ -1,6 +1,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { ResultadoComparacionDatos } from "../types/ComparacionDatos";
+import { registrarInfo } from "./LoggerPruebas";
 
 export const RUTA_LOG_COMPARACIONES = path.resolve(
   __dirname,
@@ -36,7 +37,7 @@ export async function guardarLogComparacionDatos(
     encoding: "utf8",
     flag: "wx",
   });
-  console.log(`Comparación de datos guardada en ${rutaArchivo}`);
+  registrarInfo(`Comparación de datos guardada en ${rutaArchivo}`);
 
   return rutaArchivo;
 }
