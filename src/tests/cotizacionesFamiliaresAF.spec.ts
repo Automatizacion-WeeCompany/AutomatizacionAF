@@ -1,4 +1,5 @@
 import { test } from "@playwright/test";
+import { esEscenarioCotizadorCI } from "../configuraciones/escenariosCI";
 import { CotizacionFamiliarAFFlow } from "../flows/cotizacionFamiliarAF.flow";
 import { ExtraerDatosExcel } from "../utilidades/ObtencionDeDatos";
 
@@ -11,9 +12,9 @@ test.describe("Cotizaciones familiares AF", () => {
     }
 
     const numeroFlujo = indice + 1;
-    test(`Escenario: ${escenario.EscenarioPrueba} ${escenario.IdiomaCotizacion}`, async ({
-      page,
-    }) => {
+    test(`Escenario: ${escenario.EscenarioPrueba} ${escenario.IdiomaCotizacion}`, {
+      tag: esEscenarioCotizadorCI(escenario.EscenarioPrueba) ? "@ci" : [],
+    }, async ({ page }) => {
       const cotizacionFamiliar = new CotizacionFamiliarAFFlow(page);
       await cotizacionFamiliar.ejecutar(escenario, numeroFlujo);
     });

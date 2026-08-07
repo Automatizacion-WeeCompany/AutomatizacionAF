@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { esEscenarioEmisionCI } from "../configuraciones/escenariosCI";
 import { CotizacionFamiliarAFFlow } from "../flows/cotizacionFamiliarAF.flow";
 import { CotizacionIndividualAFFlow } from "../flows/cotizacionIndividualAF.flow";
 import {
@@ -22,9 +23,14 @@ test.describe("Emision Claims AF", () => {
       }
 
       const numeroFlujo = indice + 1;
-      test(`Escenario: ${escenarioClaims.EscenarioPrueba} | ${escenarioCotizacion.EscenarioPrueba}`, async ({
-        page,
-      }) => {
+      test(`Escenario: ${escenarioClaims.EscenarioPrueba} | ${escenarioCotizacion.EscenarioPrueba}`, {
+        tag: esEscenarioEmisionCI(
+          escenarioClaims.EscenarioPrueba,
+          escenarioCotizacion.EscenarioPrueba,
+        )
+          ? "@ci"
+          : [],
+      }, async ({ page }) => {
         const cotizador =
           escenarioCotizacion.TipoPoliza === "Familiar"
             ? new CotizacionFamiliarAFFlow(page)

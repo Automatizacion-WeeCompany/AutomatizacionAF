@@ -2,6 +2,7 @@ import { Page } from '@playwright/test';
 import ExcelJS from 'exceljs';
 import path from 'path';
 import fs from 'fs';
+import { registrarInfo } from './LoggerPruebas';
 
 export async function consolidarReportesPolizas() {
     const carpeta = path.join(__dirname, '../Evidencias');
@@ -10,7 +11,7 @@ export async function consolidarReportesPolizas() {
         .filter(f => f.startsWith('ReportePolizas_worker') && f.endsWith('.xlsx'));
 
     if (archivos.length === 0) {
-        console.log('⚠ No se encontraron archivos de worker para consolidar.');
+        registrarInfo('⚠ No se encontraron archivos de worker para consolidar.');
         return;
     }
 
@@ -27,7 +28,7 @@ export async function consolidarReportesPolizas() {
 
     for (const archivo of archivos) {
         const ruta = path.join(carpeta, archivo);
-        console.log(`🔁 Leyendo archivo: ${ruta}`);
+        registrarInfo(`🔁 Leyendo archivo: ${ruta}`);
 
         const wb = new ExcelJS.Workbook();
         await wb.xlsx.readFile(ruta);
@@ -52,5 +53,5 @@ export async function consolidarReportesPolizas() {
 
     const rutaFinal = path.join(carpeta, 'ReportePolizas_Consolidado.xlsx');
     await workbookFinal.xlsx.writeFile(rutaFinal);
-    console.log(`✅ Consolidado generado en: ${rutaFinal}`);
+    registrarInfo(`✅ Consolidado generado en: ${rutaFinal}`);
 }

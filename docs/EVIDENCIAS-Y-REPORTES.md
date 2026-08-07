@@ -6,24 +6,28 @@
 
 | Evidencia | Política |
 |---|---|
-| Reportero de consola | `list`. |
-| Reporte HTML | Siempre, en `Evidencias/reportes/`. |
+| Reportero de consola | `list` local; `dot` en CI/CD. |
+| Reporte HTML | Siempre; `playwright-report/` local y `Evidencias/reportes-ci/` en CI/CD. |
 | Trace | Se conserva en falla. |
 | Screenshot | Solo en falla. |
-| Video | Siempre. |
+| Video | Se conserva en falla. |
 | Apertura automática del HTML | Deshabilitada. |
 
-El video siempre activo incrementa almacenamiento y riesgo de capturar datos sensibles. Debe revisarse antes de CI o ejecuciones masivas.
+Los artefactos permanecen disponibles en disco, pero los mensajes informativos no se imprimen en CI/CD. `CI_VERBOSE=1` permite reactivarlos temporalmente sin cambiar código.
 
 ## Ubicaciones
 
-### `Evidencias/reportes/`
+### `playwright-report/`
 
-Salida HTML configurada de Playwright. Incluye `index.html` y recursos asociados.
+Salida HTML de la configuración local. Incluye `index.html` y recursos asociados.
 
 ```bash
-npx playwright show-report Evidencias/reportes
+npx playwright show-report playwright-report
 ```
+
+### `Evidencias/reportes-ci/`
+
+Salida HTML del smoke CI/CD. Se genera como archivo local del runner y está ignorada por Git. La consola solo muestra puntos, fallas y el resumen de Playwright; el detalle completo permanece en este reporte y en `test-results/`.
 
 ### `test-results/`
 

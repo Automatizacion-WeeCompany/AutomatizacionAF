@@ -16,6 +16,8 @@ La suite debe demostrar que los recorridos críticos de AF y Claims avanzan por 
 
 El 4 de agosto de 2026, Playwright descubrió 576 tests: 192 escenarios de Cotizador y 96 recorridos integrados de Emisión, repetidos en dos navegadores. Este número es una fotografía; usa `npx playwright test --list` como fuente actual.
 
+La variante CI/CD no ejecuta esta matriz completa. Su perfil smoke selecciona cuatro recorridos `@ci` en Chromium: BMI familiar e individual, y emisión familiar e individual. La selección se administra en `src/configuraciones/escenariosCI.ts`; no modifica los datos ni el descubrimiento local.
+
 ## Tipos de validación vigentes
 
 - URL esperada después del login AF.
@@ -36,7 +38,7 @@ El 4 de agosto de 2026, Playwright descubrió 576 tests: 192 escenarios de Cotiz
 
 - No hay pruebas unitarias para lectores, validadores o mapeos de Excel.
 - No hay pruebas de API, accesibilidad o visual regression.
-- No existe pipeline CI versionado.
+- Existe una configuración smoke lista para CI/CD, pero no hay un workflow de proveedor versionado que la invoque.
 - Los contratos de textos en inglés y portugués están referenciados pero faltan.
 - Existen esperas fijas y localizadores directos fuera de Page Objects.
 - El gateway de pago externo puede introducir intermitencia en la redirección final.

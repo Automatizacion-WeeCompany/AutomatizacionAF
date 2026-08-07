@@ -35,6 +35,8 @@ npx playwright test --list
 | Comando | Uso | Observaciones |
 |---|---|---|
 | `npm test` | Ejecuta toda la suite. | Chromium y Firefox; navegador visible por configuración. |
+| `npm run test:ci` | Ejecuta el smoke de CI/CD. | Cuatro recorridos etiquetados `@ci`, solo Chromium, headless y salida compacta. |
+| `npm run test:ci:list` | Lista la selección de CI/CD sin abrir navegador. | Debe descubrir cuatro pruebas mientras se mantenga el perfil vigente. |
 | `npm run test:ui` | Abre Playwright UI. | Útil para depuración interactiva. |
 | `npm run build` | Valida TypeScript. | No genera `dist`. |
 | `npm run merge-polizas` | Pretende consolidar archivos por worker. | Actualmente no inicia porque `ts-node` no está declarado como dependencia. |
@@ -63,19 +65,36 @@ npx playwright test --project=Chromium -g "texto del escenario" --repeat-each=3
 
 Los nombres de proyecto distinguen mayúsculas: `Chromium` y `Firefox`.
 
+## Variante CI/CD
+
+`playwright.ci.config.ts` extiende la configuración normal y aplica `grep: /@ci/`. La selección se mantiene en `src/configuraciones/escenariosCI.ts` y actualmente cubre:
+
+- evaluación BMI familiar;
+- evaluación BMI individual;
+- emisión Claims familiar;
+- emisión Claims individual.
+
+CI usa un worker, un reintento y solamente Chromium para no sobrecargar el ambiente controlado. La suite local no aplica este filtro y conserva los 576 casos. Para cambiar el smoke se modifica únicamente el catálogo central, sin desactivar filas del Excel ni borrar escenarios.
+
+La consola CI usa el reportero `dot`. Los mensajes informativos del framework se muestran localmente, pero se silencian cuando existe `CI`; los errores y el resumen de Playwright permanecen visibles. Para diagnóstico remoto:
+
+```bash
+CI_VERBOSE=1 npm run test:ci
+```
+
 ## Configuración efectiva
 
 La raíz carga `src/configuraciones/playwright.config.ts`. La configuración actual establece:
 
 - `testDir`: `src/tests`.
 - timeout por test: 400 segundos.
-- `workers`: 1.
-- `fullyParallel`: habilitado, sin paralelismo real mientras haya un solo worker.
+- `workers`: valor automático de Playwright en local y 1 en CI/CD.
+- `fullyParallel`: habilitado.
 - navegador visible para Chromium y Firefox.
-- reporte de lista y HTML.
+- reporte local de lista y HTML; CI usa puntos y HTML.
 - trace retenido en fallas.
 - screenshot solo en fallas.
-- video siempre activo.
+- video retenido en fallas.
 
 Las URLs de navegación provienen principalmente del Excel; además existen URLs en configuración y aserciones. No cambies solo una fuente sin auditar las demás.
 
@@ -91,7 +110,8 @@ Las URLs de navegación provienen principalmente del Excel; además existen URLs
 
 ## Resultados y evidencia
 
-- Reporte HTML: `Evidencias/reportes/index.html`.
+- Reporte HTML local: `playwright-report/index.html`.
+- Reporte HTML CI/CD: `Evidencias/reportes-ci/index.html`.
 - Artefactos de ejecución: `test-results/`.
 - Resultados de textos faltantes: `src/textosEsperados/textosFaltantes/`.
 - Reportes de póliza por worker y consolidado: `src/Evidencias/` cuando se generan.
