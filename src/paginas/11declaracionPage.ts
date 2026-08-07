@@ -1,4 +1,5 @@
 import { expect, Page } from "@playwright/test";
+import { registrarInfo } from "../utilidades/LoggerPruebas";
 
 export class DeclaracionPage {
     constructor(private readonly page: Page) { }
@@ -176,7 +177,7 @@ export class DeclaracionPage {
         // Soltar mouse
         await this.page.mouse.up();
 
-        console.log('Firma dibujada correctamente');
+        registrarInfo('Firma dibujada correctamente');
     }
     async ClickBtnFirmarDibujaTuFirmaConsultor() {
         await this.page

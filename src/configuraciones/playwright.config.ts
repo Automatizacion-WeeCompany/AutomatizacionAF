@@ -1,10 +1,11 @@
 import { defineConfig, devices } from '@playwright/test';
 import path from 'node:path';
+import { registrarInfo } from '../utilidades/LoggerPruebas';
 
 const VIEWPORT_ESTABLE = { width: 1280, height: 720 };
 const isCI = Boolean(process.env.CI);
 
-console.log('✅ Cargando configuración de Playwright desde Nueva configuración /src/configuraciones/playwright.config.ts');
+registrarInfo('✅ Cargando configuración de Playwright desde Nueva configuración /src/configuraciones/playwright.config.ts');
 export default defineConfig({
   testDir: path.join(__dirname, '../tests'),
   timeout: 400000,

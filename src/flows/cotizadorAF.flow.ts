@@ -27,6 +27,7 @@ import {
   ModalSecureCheckoutPage,
 } from "@pages/14metodoPagoPage";
 import { agregarPersonaPT2Page } from "@pages/agregarPersonaPT2Page";
+import { registrarInfo } from "../utilidades/LoggerPruebas";
 
 const CONFIGURACION_IDIOMAS: Record<
   Idioma,
@@ -96,7 +97,7 @@ export class InicioSesionAFFlow {
     await expect(
       this.page.getByText(configuracionIdioma.textoConfirmacion, { exact: true }).first(),
     ).toBeVisible();
-    console.log(
+    registrarInfo(
       `Idioma cambiado correctamente, texto visible: ${configuracionIdioma.textoConfirmacion}`,
     );
     await validarPantallaPorIdioma({
@@ -635,7 +636,7 @@ export class PasoSeisCuestionarioMedicoFlow {
       CapturaCuestionarioMedico,
       "CuestionarioMedicoCaptura",
     );
-    console.log(`Cuestionario médico I configurado en: ${respuestaCuestionario}`);
+    registrarInfo(`Cuestionario médico I configurado en: ${respuestaCuestionario}`);
 
     if (respuestaCuestionario === "No") {
       await this.capturarRespuestasNegativas();
@@ -738,7 +739,7 @@ export class PasoSieteCuestionarioMedicoFlow {
       CapturaCuestionarioMedico,
       "CapturaPreguntasPt2",
     );
-    console.log(`Cuestionario médico II configurado en: ${respuestaCuestionario}`);
+    registrarInfo(`Cuestionario médico II configurado en: ${respuestaCuestionario}`);
 
     if (respuestaCuestionario === "No") {
       await this.cuestionarioMedicoPt2Page.SeleccionarTodasLasRespuestasNo();
@@ -919,13 +920,13 @@ export class PasoSieteCuestionarioMedicoFlow {
       await this.cuestionarioMedicoPt2Page.esperarDestinoDespuesDelCuestionario();
 
     if (destino === "SeccionAdicional") {
-      console.log("Sección 2 del cuestionario médico detectada");
+      registrarInfo("Sección 2 del cuestionario médico detectada");
       await this.cuestionarioMedicoPt2Page.ClickCheckNoPA2();
       await this.cuestionarioMedicoPt2Page.ClickCheckNoPB2();
       await this.cuestionarioMedicoPt2Page.ClickCheckNoPC2();
       await this.cuestionarioMedicoPt2Page.ClickBtnSiguienteSeccion2();
     } else {
-      console.log("Esta ejecución NO incluye la sección 2 del cuestionario");
+      registrarInfo("Esta ejecución NO incluye la sección 2 del cuestionario");
     }
   }
 }
@@ -1048,7 +1049,7 @@ export class PasoTreceMetodoPagoFlow {
     await this.modalSecureCheckoutPage.ClickBtnContinuarConfirmacionPago();
 
     const confirmacion = await this.confirmacionPagoPage.validarConfirmacion(idioma);
-    console.log(
+    registrarInfo(
       `Pago confirmado para ${confirmacion.nombreTitular}. Póliza: ${confirmacion.numeroPoliza}`,
     );
     return confirmacion;
