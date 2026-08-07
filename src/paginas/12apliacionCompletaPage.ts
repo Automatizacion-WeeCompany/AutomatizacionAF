@@ -1,5 +1,6 @@
 import { expect, Page } from "@playwright/test";
 import { Idioma } from "src/utilidades/validacionIdiomas";
+import { registrarInfo } from "../utilidades/LoggerPruebas";
 
 const EVALUACION_POR_IDIOMA: Record<
     Idioma,
@@ -61,7 +62,7 @@ export class ApliacionCompletaPage {
         await expect(frame.locator('#btn_payNow')).toBeHidden();
         await expect(frame.locator('#option-si')).toBeHidden();
 
-        console.log(`Cotización en evaluación: ${lineasEvaluacion.join(' ')}`);
+        registrarInfo(`Cotización en evaluación: ${lineasEvaluacion.join(' ')}`);
         return lineasEvaluacion;
     }
 }
