@@ -74,9 +74,9 @@ Los nombres de proyecto distinguen mayúsculas: `Chromium` y `Firefox`.
 - emisión Claims familiar;
 - emisión Claims individual.
 
-CI usa un worker, un reintento y solamente Chromium para no sobrecargar el ambiente controlado. La suite local no aplica este filtro y conserva los 576 casos. Para cambiar el smoke se modifica únicamente el catálogo central, sin desactivar filas del Excel ni borrar escenarios.
+El smoke usa `CI_WORKERS`, un reintento y solamente Chromium para no sobrecargar el ambiente controlado. El workflow ejecuta este smoke de 4 casos en cada push y la regresión completa de 576 casos en las corridas programadas. Al iniciar manualmente el workflow, `tipo_ejecucion` ofrece `smoke` (4 casos), `rapida` (288 casos, todos los escenarios en Chromium) y `completa` (576 casos, Chromium y Firefox). Para cambiar el smoke se modifica únicamente el catálogo central, sin desactivar filas del Excel ni borrar escenarios.
 
-La consola CI usa el reportero `dot`. Los mensajes informativos del framework se muestran localmente, pero se silencian cuando existe `CI`; los errores y el resumen de Playwright permanecen visibles. Para diagnóstico remoto:
+La consola del smoke CI usa el reportero `dot`. Los mensajes informativos del framework se muestran localmente, pero se silencian cuando existe `CI`; los errores y el resumen de Playwright permanecen visibles. Para diagnóstico remoto:
 
 ```bash
 CI_VERBOSE=1 npm run test:ci
@@ -87,14 +87,14 @@ CI_VERBOSE=1 npm run test:ci
 La raíz carga `src/configuraciones/playwright.config.ts`. La configuración actual establece:
 
 - `testDir`: `src/tests`.
-- timeout por test: 400 segundos.
-- `workers`: valor automático de Playwright en local y 1 en CI/CD.
-- `fullyParallel`: habilitado.
-- navegador visible para Chromium y Firefox.
-- reporte local de lista y HTML; CI usa puntos y HTML.
-- trace retenido en fallas.
+- timeout por test: 180 segundos.
+- `workers`: valor automático de Playwright en local y `CI_WORKERS` en CI/CD; el valor predeterminado es 3 y se limita a 4.
+- `fullyParallel`: deshabilitado porque las cuentas y el ambiente son compartidos; el paralelismo queda limitado a grupos por archivo/proyecto.
+- navegador visible en local y headless en CI para Chromium y Firefox.
+- reporte de lista y HTML en la configuración base; el smoke usa puntos y HTML.
+- trace retenido en fallas locales y en el primer reintento de CI.
 - screenshot solo en fallas.
-- video retenido en fallas.
+- video retenido en fallas locales y en el primer reintento de CI.
 
 Las URLs de navegación provienen principalmente del Excel; además existen URLs en configuración y aserciones. No cambies solo una fuente sin auditar las demás.
 

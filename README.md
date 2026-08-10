@@ -76,7 +76,9 @@ npm run test:ci
 npx playwright show-report playwright-report
 ```
 
-La configuración actual usa un worker, aun cuando `fullyParallel` está habilitado. Los proyectos se llaman exactamente `Chromium` y `Firefox`.
+La configuración usa workers automáticos en local y `CI_WORKERS` en CI/CD (3 por defecto, con límite de 4). `fullyParallel` permanece deshabilitado porque las cuentas de AF y Claims son compartidas. Los proyectos se llaman exactamente `Chromium` y `Firefox`.
+
+La ejecución manual permite elegir `smoke` (4 casos en Chromium), `rapida` (los 288 casos funcionales en Chromium) o `completa` (576 casos en Chromium y Firefox). Los pushes usan smoke y las ejecuciones programadas conservan la regresión completa.
 
 ## Arquitectura
 

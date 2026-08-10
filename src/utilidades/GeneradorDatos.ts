@@ -71,8 +71,11 @@ export class GeneradorDatos {
   static guardarResultadoJSON(data: any, carpeta: string, nombreArchivo: string): void {
     const path = require('path');
     const fecha = this.obtenerFechaActual();
-    //const path = `${carpeta}/${nombreArchivo}-${fecha}.json`;
-    const nombreArchivoConFecha = `${nombreArchivo}-${fecha}.json`;
+    const idWorker = (process.env.TEST_WORKER_INDEX ?? '0').replace(
+      /[^a-zA-Z0-9_-]/g,
+      '-',
+    );
+    const nombreArchivoConFecha = `${nombreArchivo}-${fecha}-worker-${idWorker}.json`;
     const rutaCompleta = path.join(carpeta, nombreArchivoConFecha);
 
     let datosAnteriores: any[] = [];
