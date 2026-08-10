@@ -6,8 +6,6 @@ export default defineConfig({
   ...configBase,
   grep: /@ci/,
   forbidOnly: true,
-  workers: 1,
-  retries: 1,
   reporter: [
     ["dot"],
     [
@@ -18,12 +16,5 @@ export default defineConfig({
       },
     ],
   ],
-  use: {
-    ...configBase.use,
-    headless: true,
-    trace: "retain-on-failure",
-    screenshot: "only-on-failure",
-    video: "retain-on-failure",
-  },
   projects: configBase.projects?.filter(({ name }) => name === "Chromium"),
 });

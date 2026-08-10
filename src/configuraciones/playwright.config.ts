@@ -1,17 +1,33 @@
-import { defineConfig, devices } from '@playwright/test';
+import { defineConfig } from '@playwright/test';
 import path from 'node:path';
 import { registrarInfo } from '../utilidades/LoggerPruebas';
 
 const VIEWPORT_ESTABLE = { width: 1280, height: 720 };
 const isCI = Boolean(process.env.CI);
+const CI_WORKERS_PREDETERMINADOS = 3;
+const MAX_CI_WORKERS = 4;
+const parsedWorkers = Number.parseInt(
+  process.env.CI_WORKERS ?? String(CI_WORKERS_PREDETERMINADOS),
+  10,
+);
+const ciWorkers =
+  Number.isInteger(parsedWorkers) && parsedWorkers > 0
+    ? Math.min(parsedWorkers, MAX_CI_WORKERS)
+    : CI_WORKERS_PREDETERMINADOS;
 
 registrarInfo('✅ Cargando configuración de Playwright desde Nueva configuración /src/configuraciones/playwright.config.ts');
+registrarInfo(
+  `Entorno Playwright: CI=${isCI}, headless=${isCI}, workers=${isCI ? ciWorkers : 'auto'}, fullyParallel=false`,
+);
 export default defineConfig({
   testDir: path.join(__dirname, '../tests'),
-  timeout: 400000,
-  fullyParallel: true,
-  workers: isCI ? 1 : undefined,
-  retries: isCI ? 2 : 0,
+  timeout: 180_000,
+  expect: {
+    timeout: 15_000,
+  },
+  fullyParallel: false,
+  workers: isCI ? ciWorkers : undefined,
+  retries: isCI ? 1 : 0,
   reporter: [
     ['list'],
     ['html', {
@@ -22,9 +38,11 @@ export default defineConfig({
   use: {
     baseURL: 'https://weeqp.azurewebsites.net/QP/WeeClaims',
     headless: isCI,
-    trace: 'retain-on-failure',
+    actionTimeout: 30_000,
+    navigationTimeout: 60_000,
+    trace: isCI ? 'on-first-retry' : 'retain-on-failure',
     screenshot: 'only-on-failure',
-    video: 'retain-on-failure',
+    video: isCI ? 'on-first-retry' : 'retain-on-failure',
   },
   projects: [
     {

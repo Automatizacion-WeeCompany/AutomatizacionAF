@@ -13,6 +13,15 @@ on:
           - qa
           - staging
           - produccion
+      tipo_ejecucion:
+        description: Cobertura de la ejecución manual
+        required: true
+        default: rapida
+        type: choice
+        options:
+          - smoke
+          - rapida
+          - completa
 
   # Ejecuta las pruebas de lunes a viernes a las 02:00.
   schedule:
@@ -39,6 +48,7 @@ jobs:
 
     env:
       CI: "true"
+      CI_WORKERS: "3"
       AMBIENTE: ${{ inputs.ambiente || 'qa' }}
       BASE_URL_QA: ${{ vars.BASE_URL_QA }}
       BASE_URL_STAGING: ${{ vars.BASE_URL_STAGING }}
@@ -62,18 +72,34 @@ jobs:
       - name: Instalar navegadores de Playwright
         run: npx playwright install --with-deps
 
-      - name: Mostrar ambiente seleccionado
-        run: echo "Ejecutando pruebas en el ambiente $AMBIENTE"
+      - name: Mostrar configuración de ejecución
+        run: |
+          echo "CI=$CI"
+          echo "CI_WORKERS=$CI_WORKERS"
+          echo "AMBIENTE=$AMBIENTE"
+          echo "EVENTO=${{ github.event_name }}"
+          echo "TIPO_EJECUCION=${{ inputs.tipo_ejecucion || 'automatico-segun-evento' }}"
 
-      - name: Ejecutar pruebas
-        run: npm run test:e2e
+      - name: Ejecutar smoke
+        if: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.tipo_ejecucion == 'smoke') }}
+        run: npx playwright test --config=playwright.ci.config.ts
+
+      - name: Ejecutar regresión rápida en Chromium
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.tipo_ejecucion == 'rapida' }}
+        run: npx playwright test --config=src/configuraciones/playwright.config.ts --project=Chromium
+
+      - name: Ejecutar regresión completa
+        if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.tipo_ejecucion == 'completa') }}
+        run: npx playwright test --config=src/configuraciones/playwright.config.ts
 
       - name: Guardar reporte de Playwright
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v5
         with:
-          name: reporte-playwright-${{ github.run_number }}
-          path: playwright-report/
+          name: reporte-playwright-${{ github.event_name }}-${{ github.run_number }}-${{ github.run_attempt }}
+          path: |
+            playwright-report/
+            Evidencias/reportes-ci/
           retention-days: 30
           if-no-files-found: warn
 
@@ -81,7 +107,9 @@ jobs:
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v5
         with:
-          name: evidencias-${{ github.run_number }}
-          path: test-results/
+          name: evidencias-${{ github.event_name }}-${{ github.run_number }}-${{ github.run_attempt }}
+          path: |
+            test-results/
+            Evidencias/
           retention-days: 15
           if-no-files-found: ignore

@@ -104,8 +104,9 @@ Prioridad baja:
 
 - Esperar estados observables, no tiempos arbitrarios.
 - Usar localizadores resistentes y centralizados.
-- Mantener un worker mientras los datos/ambiente no soporten paralelismo seguro.
-- Si se habilitan varios workers, aislar usuarios, folios y reportes.
+- Mantener `fullyParallel` deshabilitado mientras AF y Claims utilicen cuentas compartidas.
+- Ejecutar CI con 3 workers entre grupos por archivo/proyecto; aumentar a 4 solamente después de validar sesiones simultáneas y capacidad del ambiente.
+- Mantener folios y reportes aislados por worker.
 - No ocultar fallas con retries indiscriminados.
 - Una prueba intermitente debe tener evidencia, responsable y causa investigada.
 
