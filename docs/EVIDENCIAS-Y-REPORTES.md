@@ -6,11 +6,11 @@
 
 | Evidencia | Política |
 |---|---|
-| Reportero de consola | `list` local; `dot` en CI/CD. |
-| Reporte HTML | Siempre; `playwright-report/` local y `Evidencias/reportes-ci/` en CI/CD. |
-| Trace | Se conserva en falla. |
+| Reportero de consola | `list` en la configuración base; `dot` en el smoke CI/CD. |
+| Reporte HTML | Siempre; `playwright-report/` en la configuración base y `Evidencias/reportes-ci/` en el smoke. |
+| Trace | Se conserva en falla local y en el primer reintento de CI. |
 | Screenshot | Solo en falla. |
-| Video | Se conserva en falla. |
+| Video | Se conserva en falla local y en el primer reintento de CI. |
 | Apertura automática del HTML | Deshabilitada. |
 
 Los artefactos permanecen disponibles en disco, pero los mensajes informativos no se imprimen en CI/CD. `CI_VERBOSE=1` permite reactivarlos temporalmente sin cambiar código.
@@ -51,7 +51,7 @@ Los campos sin valor capturado se registran como `NoComparable` y permanecen vis
 
 ### `src/textosEsperados/textosFaltantes/`
 
-Resultados JSON de validaciones de contenido. El nombre incluye pantalla/idioma y fecha. La función agrega resultados si el archivo del día ya existe.
+Resultados JSON de validaciones de contenido. El nombre incluye pantalla/idioma, fecha e identificador de worker. La función agrega resultados si el archivo del worker para ese día ya existe.
 
 Actualmente hay resultados históricos versionados. A futuro conviene tratarlos como artefactos de ejecución, no como fuente del código, después de acordar retención y migrar lo que tenga valor como baseline.
 
@@ -68,6 +68,8 @@ Esta ruta no es la misma que `Evidencias/reportes/` de Playwright.
 ## Reporte de pólizas
 
 El diseño existente contempla:
+
+- `Evidencias/polizas-generadas-worker-<id>.json`, un log por proceso de Playwright para evitar escrituras cruzadas.
 
 1. `obtenerDatosConfirmacion()` extrae productos, pólizas y folios.
 2. `guardarExcelConfirmacionHistorico()` escribe un libro por worker para evitar colisiones.

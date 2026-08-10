@@ -13,9 +13,14 @@ export interface RegistroLogPoliza extends DatosLogPoliza {
   fechaHora: string;
 }
 
+const idWorker = (process.env.TEST_WORKER_INDEX ?? "0").replace(
+  /[^a-zA-Z0-9_-]/g,
+  "-",
+);
+
 export const RUTA_LOG_POLIZAS = path.resolve(
   __dirname,
-  "../../Evidencias/polizas-generadas.json",
+  `../../Evidencias/polizas-generadas-worker-${idWorker}.json`,
 );
 
 let colaEscrituras: Promise<void> = Promise.resolve();
