@@ -78,33 +78,36 @@ El archivo actual conserva metadatos de otro proyecto y un token versionado. Ant
 5. decidir cobertura: hoy no se genera `coverage/lcov.info`;
 6. ejecutar el scanner en CI, no depender de una instancia local individual.
 
-## CI/CD recomendado
+## CI/CD vigente
 
-No existe un workflow CI versionado. Una implementación futura debería separar:
+La automatización separa señal rápida, cobertura rotativa y regresión bajo
+demanda para que una matriz de miles de casos no bloquee cada cambio:
 
 ```mermaid
 flowchart LR
-    A["Checkout + Node LTS"] --> B["npm ci"]
-    B --> C["TypeScript"]
-    C --> D["Descubrimiento"]
-    D --> E["Smoke Chromium"]
-    E --> F["Publicar evidencias"]
-    F --> G["Matriz programada Chromium/Firefox"]
+    A["PR / push"] --> B["87 reglas + 2 smoke Chromium"]
+    C["Lunes a viernes"] --> D["2 E2E rotativos + 1 Claims"]
+    E["Sábado"] --> F["2 smoke Firefox + tarifas 1 × 5"]
+    G["Manual"] --> H["Perfil focalizado o full en 4 shards"]
 ```
 
-Propuesta de gates:
+Workflows versionados:
 
-- PR: instalación, compilación, descubrimiento y smoke seguro.
-- Rama principal: smoke ampliado.
-- Programado: matriz completa en ambos navegadores.
-- Manual: escenarios que crean información sensible o requieren coordinación.
+- `quality-gate.yml`: compila y ejecuta reglas; después corre dos smoke en Chromium. En PR de forks omite el E2E que requiere secretos.
+- `nightly-critical.yml`: rota cuatro slots; en una semana laboral cubre todos los perfiles críticos y ejecuta la integración AF–Claims.
+- `weekly-coverage.yml`: ejecuta los smoke en Firefox y una variante de tarifa sobre cinco países distribuidos.
+- `regression-manual.yml`: permite `smoke`, `critical`, `integration`, `tarifas`, `reglas` o `full`; el perfil completo no tiene calendario.
 
-La CI debe inyectar secretos, serializar ejecuciones que compartan datos y aplicar retención corta a evidencias.
+Los jobs E2E usan concurrencia por ambiente, un worker en perfiles focalizados,
+timeouts explícitos y falla temprana. Las evidencias automáticas se publican sólo
+en falla durante siete días. No añadas una ejecución programada de la matriz
+completa: si surge una brecha, primero incorpora una regla rápida, un escenario
+al catálogo rotativo o un perfil focalizado.
 
 ## Portabilidad
 
 - El script `clean` actual es específico de Windows.
-- El script `test:headless` actual no es válido para la versión instalada de Playwright.
+- `test:headless` es portable, pero ejecuta una cobertura amplia; para CI se deben usar los perfiles `test:ci:*`.
 - El script `merge-polizas` requiere `ts-node`, pero esa herramienta no está declarada como dependencia.
 - La documentación solo considera soportados los comandos confirmados en [Ejecución](EJECUCION.md).
 - Una corrección futura debe ser compatible con Windows, macOS y Linux o declarar explícitamente la plataforma.

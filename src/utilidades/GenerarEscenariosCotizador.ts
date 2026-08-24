@@ -1,6 +1,7 @@
 import {
   ConfiguracionPlanExcel,
   EscenarioExcel,
+  IDIOMAS_COTIZACION,
   PerfilCotizacionExcel,
 } from "../types/EscenarioExcel";
 import { validarEscenariosExcel } from "./ValidarEscenariosExcel";
@@ -12,6 +13,8 @@ const PLANES_Y_REDES_ESPERADOS = new Set([
   "Optima|Plus",
   "Vital|Plus",
   "Vital|Core",
+  "Protect|Sin cobertura dentro de EE. UU.",
+  "Protect|Core",
 ]);
 
 const DEDUCIBLES_ESPERADOS = new Set([
@@ -129,11 +132,14 @@ export function generarEscenariosCotizador(
   validarCoberturaPerfiles(perfilesValidos);
 
   const escenarios = perfilesValidos.flatMap((perfil) =>
-    configuracionesValidas.map((configuracion): EscenarioExcel => ({
-      ...perfil,
-      ...configuracion,
-      EscenarioPrueba: `${perfil.PerfilCotizacion} | ${configuracion.ConfiguracionPlan}`,
-    })),
+    configuracionesValidas.flatMap((configuracion) =>
+      IDIOMAS_COTIZACION.map((idioma): EscenarioExcel => ({
+        ...perfil,
+        ...configuracion,
+        IdiomaCotizacion: idioma,
+        EscenarioPrueba: `${perfil.PerfilCotizacion} | ${configuracion.ConfiguracionPlan} | ${idioma}`,
+      })),
+    ),
   );
 
   return validarEscenariosExcel("CotizadorAF", escenarios);

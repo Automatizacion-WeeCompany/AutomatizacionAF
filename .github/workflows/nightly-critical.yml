@@ -1,0 +1,105 @@
+name: Cobertura crítica nocturna AF
+
+on:
+  schedule:
+    - cron: "17 2 * * 1-5"
+      timezone: "America/Mexico_City"
+  workflow_dispatch:
+    inputs:
+      ambiente:
+        description: Ambiente de pruebas
+        required: true
+        default: qa
+        type: choice
+        options:
+          - qa
+          - staging
+      slot:
+        description: Grupo crítico; automático rota entre 1 y 4
+        required: true
+        default: automatico
+        type: choice
+        options:
+          - automatico
+          - "1"
+          - "2"
+          - "3"
+          - "4"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ambiente-af-claims-${{ inputs.ambiente || 'qa' }}
+  cancel-in-progress: false
+
+jobs:
+  nightly:
+    name: Reglas, rotación E2E e integración Claims
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    env:
+      CI: "true"
+      CI_BROWSER: Chromium
+      AMBIENTE: ${{ inputs.ambiente || 'qa' }}
+      BASE_URL_QA: ${{ vars.BASE_URL_QA }}
+      BASE_URL_STAGING: ${{ vars.BASE_URL_STAGING }}
+      TEST_USERNAME: ${{ secrets.TEST_USERNAME }}
+      TEST_PASSWORD: ${{ secrets.TEST_PASSWORD }}
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v6
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Compilar TypeScript
+        run: npm run build
+
+      - name: Ejecutar reglas de negocio
+        run: npm run test:ci:reglas
+
+      - name: Determinar slot de cobertura
+        shell: bash
+        run: |
+          if [[ "${{ inputs.slot || 'automatico' }}" == "automatico" ]]; then
+            DIA=$(date +%u)
+            SLOT=$(( (DIA - 1) % 4 + 1 ))
+          else
+            SLOT="${{ inputs.slot }}"
+          fi
+          echo "CI_NIGHTLY_SLOT=$SLOT" >> "$GITHUB_ENV"
+          echo "Slot crítico seleccionado: $SLOT"
+
+      - name: Instalar únicamente Chromium
+        id: navegadores
+        run: npx playwright install --with-deps chromium
+
+      - name: Ejecutar dos escenarios críticos rotativos
+        run: npm run test:ci:nightly
+
+      - name: Ejecutar integración AF a Claims
+        if: ${{ !cancelled() && steps.navegadores.outcome == 'success' }}
+        run: npm run test:ci:integration
+
+      - name: Guardar diagnóstico nocturno
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v5
+        with:
+          name: diagnostico-nightly-${{ github.run_number }}-${{ github.run_attempt }}
+          path: |
+            test-results/
+            Evidencias/reportes-ci/nightly/
+            Evidencias/reportes-ci/integration/
+            Evidencias/comparaciones-datos/
+            Evidencias/emision-claims/
+          retention-days: 7
+          if-no-files-found: ignore

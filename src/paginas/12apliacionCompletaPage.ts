@@ -19,8 +19,60 @@ const EVALUACION_POR_IDIOMA: Record<
     },
 };
 
+export class AplicacionEnEvaluacionBMIError extends Error {
+    constructor(detalle: string) {
+        super(detalle);
+        this.name = 'AplicacionEnEvaluacionBMIError';
+    }
+}
+
 export class ApliacionCompletaPage {
     constructor(private readonly page: Page) { }
+
+    async validarDisponibleParaPagoSinBMI(idioma: Idioma) {
+        const { patron } = EVALUACION_POR_IDIOMA[idioma];
+        const frame = this.page.frameLocator('iframe#ifCotizador');
+        const contenido = frame.locator('body');
+        const botonPagarAhora = frame.locator('#btn_payNow');
+        await expect.poll(
+            async () => {
+                if (
+                    (await botonPagarAhora.isVisible()) &&
+                    (await botonPagarAhora.isEnabled())
+                ) {
+                    return 'Pago';
+                }
+
+                const textoVisible = await contenido.innerText().catch(() => '');
+                if (patron.test(textoVisible)) {
+                    return 'EvaluacionBMI';
+                }
+                return 'Pendiente';
+            },
+            {
+                timeout: 30000,
+                message:
+                    'La aplicación no llegó al pago ni informó una evaluación BMI',
+            },
+        ).not.toBe('Pendiente');
+
+        const pagoDisponible =
+            (await botonPagarAhora.isVisible()) &&
+            (await botonPagarAhora.isEnabled());
+        if (!pagoDisponible) {
+            const textoVisible = await contenido.innerText().catch(() => '');
+            const detalle = textoVisible
+                .split(/\r?\n/)
+                .map((linea) => linea.trim())
+                .find((linea) => patron.test(linea));
+            throw new AplicacionEnEvaluacionBMIError(
+                detalle || 'La póliza fue enviada a evaluación BMI',
+            );
+        }
+
+        await expect(botonPagarAhora).toBeVisible();
+        await expect(botonPagarAhora).toBeEnabled();
+    }
 
     async clicBtnPagarAhora() {
         const frame = this.page.frameLocator('iframe#ifCotizador');

@@ -1,5 +1,6 @@
 export type EstadoComparacion =
   | "Coincide"
+  | "CoincidenciaParcial"
   | "Diferente"
   | "NoComparable";
 
@@ -23,6 +24,7 @@ export interface ComparacionPestana {
 export interface ResumenComparacion {
   total: number;
   coinciden: number;
+  coincidenciasParciales: number;
   diferentes: number;
   noComparables: number;
 }

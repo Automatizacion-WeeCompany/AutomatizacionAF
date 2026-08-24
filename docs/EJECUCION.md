@@ -2,7 +2,7 @@
 
 ## Requisitos
 
-- Node.js 20 LTS recomendado.
+- Node.js 22 LTS recomendado y usado por GitHub Actions.
 - npm.
 - Acceso al ambiente de pruebas y cuentas autorizadas.
 - Permisos para escribir en `test-results/`, `Evidencias/` y `src/Evidencias/`.
@@ -35,46 +35,102 @@ npx playwright test --list
 | Comando | Uso | Observaciones |
 |---|---|---|
 | `npm test` | Ejecuta toda la suite. | Chromium y Firefox; navegador visible por configuración. |
-| `npm run test:ci` | Ejecuta el smoke de CI/CD. | Cuatro recorridos etiquetados `@ci`, solo Chromium, headless y salida compacta. |
-| `npm run test:ci:list` | Lista la selección de CI/CD sin abrir navegador. | Debe descubrir cuatro pruebas mientras se mantenga el perfil vigente. |
+| `npm run test:ci` | Ejecuta el smoke de CI/CD. | Dos recorridos críticos `@smoke`, Chromium por defecto, headless y un worker. |
+| `npm run test:ci:list` | Lista el smoke sin abrir navegador. | Debe descubrir exactamente dos pruebas. |
+| `npm run test:ci:reglas` | Ejecuta reglas y contratos de cobertura para CI. | 87 pruebas sin navegador, video, trace ni screenshot. |
+| `npm run test:ci:nightly` | Ejecuta el turno nocturno. | Dos casos; requiere `CI_NIGHTLY_SLOT=1..4`. |
+| `npm run test:ci:critical` | Ejecuta toda la selección crítica de Aplicación. | Ocho casos que cubren perfiles y ejes comerciales. |
+| `npm run test:ci:integration` | Ejecuta la integración crítica AF a Claims. | Un caso familiar de emisión, comparación y aceptación. |
+| `npm run test:ci:tarifas` | Ejecuta la muestra semanal de tarifas. | Una variante individual y cinco países equidistantes. |
+| `npm run test:reglas` | Ejecuta las 87 pruebas de reglas y contratos CI. | Chromium, sin navegación ni creación de solicitudes. |
+| `npm run test:aplicacion` | Ejecuta los 768 recorridos de Aplicación AF. | Chromium; 256 casos por cada idioma. |
+| `npm run test:aplicacion:emision` | Ejecuta únicamente emisión directa. | 384 escenarios en Chromium. |
+| `npm run test:aplicacion:uw-bmi` | Ejecuta únicamente revisión UW por BMI. | 384 escenarios en Chromium. |
+| `npm run test:aplicacion:esp` | Ejecuta Aplicación AF en español. | 256 escenarios en Chromium. |
+| `npm run test:aplicacion:eng` | Ejecuta Aplicación AF en inglés. | 256 escenarios en Chromium. |
+| `npm run test:aplicacion:port` | Ejecuta Aplicación AF en portugués. | 256 escenarios en Chromium. |
+| `npm run test:integracion:claims` | Ejecuta emisión y comparación con WeeClaims. | 384 escenarios en Chromium. |
+| `npm run test:tarifas` | Ejecuta el flujo independiente de Validación de tarifas. | Producto cartesiano de países dinámicos y 384 variantes por navegador seleccionado. |
+| `npm run test:tarifas:list` | Lista las 384 variantes de tarifa por navegador sin abrir la aplicación. | No puede contar los países porque se descubren en tiempo de ejecución. |
 | `npm run test:ui` | Abre Playwright UI. | Útil para depuración interactiva. |
 | `npm run build` | Valida TypeScript. | No genera `dist`. |
 | `npm run merge-polizas` | Pretende consolidar archivos por worker. | Actualmente no inicia porque `ts-node` no está declarado como dependencia. |
 | `npm run test:full` | Pretende ejecutar suite y consolidación. | La fase de consolidación está bloqueada por la ausencia de `ts-node`. |
-| `npm run test:headless` | Pretende ejecutar sin UI. | Actualmente falla por el argumento `--headed=false`; ver Estado técnico. |
+| `npm run test:headless` | Ejecuta la suite en Chromium sin UI. | Usa `CI=1`; sigue siendo una ejecución amplia y no es el quality gate. |
 | `npm run clean` | Limpieza. | Actualmente usa sintaxis de Windows y no es portable a macOS/Linux. |
 
 ## Ejecuciones focalizadas
 
 ```bash
-# Archivo actual
-npx playwright test src/tests/cotizacionesAF.spec.ts --project=Chromium
+# Reglas de decisión, sin navegador
+npm run test:reglas
 
-# Describe Cotizador AF
-npx playwright test --project=Chromium -g "Cotizador AF"
+# Todos los recorridos de Aplicación AF
+npm run test:aplicacion
 
-# Describe Emision Claims AF
-npx playwright test --project=Chromium -g "Emision Claims AF"
+# Emisión directa en Aplicación AF
+npm run test:aplicacion:emision
 
-# Escenario específico
-npx playwright test --project=Chromium -g "Escenario: Emision 1"
+# Revisión UW por BMI del titular
+npm run test:aplicacion:uw-bmi
+
+# Aplicación por idioma
+npm run test:aplicacion:esp
+npm run test:aplicacion:eng
+npm run test:aplicacion:port
+
+# Mismo caso focalizado de BMI en cada idioma
+npm run test:flujo:bmi:esp
+npm run test:flujo:bmi:eng
+npm run test:flujo:bmi:port
+
+# Integración de emisión y comparación con WeeClaims
+npm run test:integracion:claims
+
+# Validación exhaustiva de tarifas en Chromium
+npm run test:tarifas -- --project=Chromium
+
+# Una variante comercial; todavía recorre todos los países
+npx playwright test src/tests/matriz-comercial/tarifas-por-pais.spec.ts --project=Chromium -g "MAT-TAR-097"
+
+# Escenario específico por identificador estable
+npx playwright test --project=Chromium -g "APP-UW-BMI-097"
 
 # Repetición para investigar inestabilidad
 npx playwright test --project=Chromium -g "texto del escenario" --repeat-each=3
 ```
 
 Los nombres de proyecto distinguen mayúsculas: `Chromium` y `Firefox`.
+Consulta [Jerarquía de pruebas](JERARQUIA-DE-PRUEBAS.md) para conocer los
+prefijos, etiquetas y alcance de cada grupo.
 
 ## Variante CI/CD
 
-`playwright.ci.config.ts` extiende la configuración normal y aplica `grep: /@ci/`. La selección se mantiene en `src/configuraciones/escenariosCI.ts` y actualmente cubre:
+`playwright.ci.config.ts` selecciona un perfil mediante `CI_PROFILE` y un
+navegador mediante `CI_BROWSER`. El catálogo central
+`src/configuraciones/escenariosCI.ts` asigna etiquetas sin desactivar filas del
+Excel:
 
-- evaluación BMI familiar;
-- evaluación BMI individual;
-- emisión Claims familiar;
-- emisión Claims individual.
+| Perfil | Selección | Uso automático |
+|---|---|---|
+| `smoke` | Dos recorridos: emisión individual y BMI familiar. | PR y push a `main`, Chromium. |
+| `nightly` | Dos recorridos del slot `CI_NIGHTLY_SLOT`. | Lunes a viernes, Chromium. |
+| `critical` | Los ocho recorridos de los cuatro slots. | Ejecución manual. |
+| `integration` | Una emisión familiar integrada con Claims. | Nocturno y manual. |
+| `tarifas` | Una variante individual y cinco países. | Semanal y manual. |
 
-El smoke usa `CI_WORKERS`, un reintento y solamente Chromium para no sobrecargar el ambiente controlado. El workflow ejecuta este smoke de 4 casos en cada push y la regresión completa de 576 casos en las corridas programadas. Al iniciar manualmente el workflow, `tipo_ejecucion` ofrece `smoke` (4 casos), `rapida` (288 casos, todos los escenarios en Chromium) y `completa` (576 casos, Chromium y Firefox). Para cambiar el smoke se modifica únicamente el catálogo central, sin desactivar filas del Excel ni borrar escenarios.
+Los cuatro slots nocturnos cubren en conjunto los ocho perfiles, las ocho
+parejas plan/red, las cuatro frecuencias, los cuatro deducibles, Esp/Eng/Port y
+las salidas Emisión/BMI.
+`src/tests/reglas/perfiles-ci.spec.ts` falla si ese contrato se reduce o duplica.
+Los perfiles E2E usan un worker para proteger la cuenta compartida y un máximo
+de una falla temprana —dos para `critical`—; las reglas puras usan cuatro
+workers y no requieren instalar navegadores.
+
+La matriz completa no tiene calendario. Sólo está disponible en
+`regression-manual.yml`, se divide en cuatro shards y publica un único reporte
+consolidado. Debe coordinarse con el ambiente porque puede crear gran cantidad
+de pólizas y solicitudes.
 
 La consola del smoke CI usa el reportero `dot`. Los mensajes informativos del framework se muestran localmente, pero se silencian cuando existe `CI`; los errores y el resumen de Playwright permanecen visibles. Para diagnóstico remoto:
 
@@ -91,10 +147,10 @@ La raíz carga `src/configuraciones/playwright.config.ts`. La configuración act
 - `workers`: valor automático de Playwright en local y `CI_WORKERS` en CI/CD; el valor predeterminado es 3 y se limita a 4.
 - `fullyParallel`: deshabilitado porque las cuentas y el ambiente son compartidos; el paralelismo queda limitado a grupos por archivo/proyecto.
 - navegador visible en local y headless en CI para Chromium y Firefox.
-- reporte de lista y HTML en la configuración base; el smoke usa puntos y HTML.
+- reporte de lista y HTML en local; CI usa puntos y HTML por perfil.
 - trace retenido en fallas locales y en el primer reintento de CI.
 - screenshot solo en fallas.
-- video retenido en fallas locales y en el primer reintento de CI.
+- video retenido únicamente cuando el test termina fallando.
 
 Las URLs de navegación provienen principalmente del Excel; además existen URLs en configuración y aserciones. No cambies solo una fuente sin auditar las demás.
 
@@ -111,12 +167,19 @@ Las URLs de navegación provienen principalmente del Excel; además existen URLs
 ## Resultados y evidencia
 
 - Reporte HTML local: `playwright-report/index.html`.
-- Reporte HTML CI/CD: `Evidencias/reportes-ci/index.html`.
+- Reporte HTML CI/CD: `Evidencias/reportes-ci/<perfil>/index.html`.
 - Artefactos de ejecución: `test-results/`.
 - Resultados de textos faltantes: `src/textosEsperados/textosFaltantes/`.
 - Reportes de póliza por worker y consolidado: `src/Evidencias/` cuando se generan.
+- Emisión y autorizaciones en Claims: `Evidencias/emision-claims/<poliza>/`.
+- Validación de tarifas: `Evidencias/validacion-tarifas/<ejecucion>/`.
 
 Consulta [Evidencias y reportes](EVIDENCIAS-Y-REPORTES.md).
+
+El archivo de Validación de tarifas es intencionalmente exhaustivo. Cada una de
+sus 384 variantes genera una póliza por cada país visible y conserva el resultado
+aunque falle otro país del mismo escenario. No debe ejecutarse en producción ni
+como smoke; para diagnosticar primero usa una variante con `-g`.
 
 ## Diagnóstico
 
