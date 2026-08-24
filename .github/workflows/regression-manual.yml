@@ -1,0 +1,204 @@
+name: Regresión manual AF
+
+on:
+  workflow_dispatch:
+    inputs:
+      ambiente:
+        description: Ambiente de pruebas
+        required: true
+        default: qa
+        type: choice
+        options:
+          - qa
+          - staging
+      perfil:
+        description: Alcance de la ejecución
+        required: true
+        default: smoke
+        type: choice
+        options:
+          - smoke
+          - critical
+          - integration
+          - tarifas
+          - reglas
+          - full
+      navegador:
+        description: Navegador
+        required: true
+        default: Chromium
+        type: choice
+        options:
+          - Chromium
+          - Firefox
+          - all
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ambiente-af-manual-${{ inputs.ambiente }}
+  cancel-in-progress: false
+
+jobs:
+  perfil-acotado:
+    name: Ejecutar perfil ${{ inputs.perfil }}
+    if: ${{ inputs.perfil != 'full' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    env:
+      CI: "true"
+      CI_BROWSER: ${{ inputs.navegador }}
+      AMBIENTE: ${{ inputs.ambiente }}
+      BASE_URL_QA: ${{ vars.BASE_URL_QA }}
+      BASE_URL_STAGING: ${{ vars.BASE_URL_STAGING }}
+      TEST_USERNAME: ${{ secrets.TEST_USERNAME }}
+      TEST_PASSWORD: ${{ secrets.TEST_PASSWORD }}
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v6
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Compilar TypeScript
+        run: npm run build
+
+      - name: Instalar navegadores requeridos
+        if: ${{ inputs.perfil != 'reglas' }}
+        shell: bash
+        run: |
+          if [[ "$CI_BROWSER" == "all" ]]; then
+            npx playwright install --with-deps chromium firefox
+          elif [[ "$CI_BROWSER" == "Firefox" ]]; then
+            npx playwright install --with-deps firefox
+          else
+            npx playwright install --with-deps chromium
+          fi
+
+      - name: Ejecutar perfil seleccionado
+        shell: bash
+        run: |
+          case "${{ inputs.perfil }}" in
+            reglas) npm run test:ci:reglas ;;
+            smoke) npm run test:ci ;;
+            critical) npm run test:ci:critical ;;
+            integration) npm run test:ci:integration ;;
+            tarifas) npm run test:ci:tarifas ;;
+          esac
+
+      - name: Guardar diagnóstico
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v5
+        with:
+          name: diagnostico-${{ inputs.perfil }}-${{ github.run_number }}-${{ github.run_attempt }}
+          path: |
+            test-results/
+            Evidencias/
+          retention-days: 7
+          if-no-files-found: ignore
+
+  regresion-completa:
+    name: Full shard ${{ matrix.shardIndex }}/4
+    if: ${{ inputs.perfil == 'full' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        shardIndex: [1, 2, 3, 4]
+
+    env:
+      CI: "true"
+      CI_BROWSER: ${{ inputs.navegador }}
+      AMBIENTE: ${{ inputs.ambiente }}
+      BASE_URL_QA: ${{ vars.BASE_URL_QA }}
+      BASE_URL_STAGING: ${{ vars.BASE_URL_STAGING }}
+      TEST_USERNAME: ${{ secrets.TEST_USERNAME }}
+      TEST_PASSWORD: ${{ secrets.TEST_PASSWORD }}
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v6
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Compilar TypeScript
+        run: npm run build
+
+      - name: Instalar navegadores requeridos
+        shell: bash
+        run: |
+          if [[ "$CI_BROWSER" == "all" ]]; then
+            npx playwright install --with-deps chromium firefox
+          elif [[ "$CI_BROWSER" == "Firefox" ]]; then
+            npx playwright install --with-deps firefox
+          else
+            npx playwright install --with-deps chromium
+          fi
+
+      - name: Ejecutar shard completo
+        run: npx playwright test --config=playwright.full.config.ts --shard=${{ matrix.shardIndex }}/4
+
+      - name: Guardar reporte blob
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v5
+        with:
+          name: blob-full-${{ matrix.shardIndex }}-${{ github.run_attempt }}
+          path: blob-report/
+          retention-days: 1
+          if-no-files-found: error
+
+  consolidar-reporte:
+    name: Consolidar reporte full
+    if: ${{ always() && !cancelled() && inputs.perfil == 'full' }}
+    needs: regresion-completa
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v6
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Descargar blobs
+        uses: actions/download-artifact@v5
+        with:
+          path: all-blob-reports
+          pattern: blob-full-*-${{ github.run_attempt }}
+          merge-multiple: true
+
+      - name: Fusionar reporte HTML
+        run: npx playwright merge-reports --reporter html ./all-blob-reports
+
+      - name: Publicar reporte consolidado
+        uses: actions/upload-artifact@v5
+        with:
+          name: reporte-full-${{ github.run_number }}-${{ github.run_attempt }}
+          path: playwright-report/
+          retention-days: 14
+          if-no-files-found: error

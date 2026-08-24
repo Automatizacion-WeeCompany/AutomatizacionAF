@@ -60,24 +60,34 @@ export class ListaEmisionesPage {
         }
 
         const fila = this.filaPorPoliza(poliza);
-        let encontrada = false;
+        const buscarEnBandejaActual = async (intentos: number) => {
+            for (let intento = 1; intento <= intentos; intento++) {
+                await this.IngresaBusquedaPoliza(poliza);
+                await this.ClickBtnBuscar();
+                const encontrada = await fila
+                    .first()
+                    .waitFor({ state: 'visible', timeout: 10000 })
+                    .then(() => true)
+                    .catch(() => false);
 
-        for (let intento = 1; intento <= 6; intento++) {
-            await this.IngresaBusquedaPoliza(poliza);
-            await this.ClickBtnBuscar();
-            encontrada = await fila
-                .first()
-                .waitFor({ state: 'visible', timeout: 10000 })
-                .then(() => true)
-                .catch(() => false);
-
-            if (encontrada) {
-                break;
+                if (encontrada) {
+                    return true;
+                }
             }
+
+            return false;
+        };
+
+        let encontrada = await buscarEnBandejaActual(6);
+        if (!encontrada) {
+            await this.ClickBandejaPendientes();
+            encontrada = await buscarEnBandejaActual(3);
         }
 
         if (!encontrada) {
-            throw new Error(`No se encontró la póliza ${poliza} en Emisión`);
+            throw new Error(
+                `No se encontró la póliza ${poliza} en las bandejas nuevas o pendientes de Emisión`,
+            );
         }
 
         await this.SeleccionaLaPoliza(poliza);

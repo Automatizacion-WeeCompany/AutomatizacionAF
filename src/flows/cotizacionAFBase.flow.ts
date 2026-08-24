@@ -1,6 +1,7 @@
 import { Page } from "@playwright/test";
 import { guardarLogPoliza } from "../utilidades/LogPolizas";
 import { EscenarioExcel } from "../types/EscenarioExcel";
+import { OpcionPaisResidencia } from "../types/ValidacionTarifas";
 import {
   ContextoDatosCotizacion,
   DatosCotizacionGuardados,
@@ -30,8 +31,16 @@ export type ResultadoEjecucionCotizacion =
       resultado: "Emision";
       nombreTitular: string;
       numeroPoliza: string;
+      tarifaAplicable?: string;
       datosCotizacion: DatosCotizacionGuardados;
     };
+
+export interface OpcionesEjecucionCotizacion {
+  paisResidencia?: OpcionPaisResidencia;
+  validarTarifaAplicable?: boolean;
+  asegurarSinBMI?: boolean;
+  registrarLogPoliza?: boolean;
+}
 
 export class CotizacionAFBaseFlow {
   private readonly inicioSesionAF: InicioSesionAFFlow;
@@ -78,6 +87,7 @@ export class CotizacionAFBaseFlow {
   async ejecutar(
     escenario: EscenarioExcel,
     numeroFlujo: number,
+    opciones: OpcionesEjecucionCotizacion = {},
   ): Promise<ResultadoEjecucionCotizacion> {
     await this.contextoDatosCotizacion.preparar();
     await this.inicioSesionAF.paginaInicio(escenario.Url);
@@ -97,6 +107,7 @@ export class CotizacionAFBaseFlow {
         escenario.TipoPoliza,
         escenario.ConyugePareja,
         String(escenario.HijosMenoresDe24 ?? ""),
+        opciones.paisResidencia,
       );
 
     await this.pasoDosPlanes.seleccionarPlanes(
@@ -106,8 +117,9 @@ export class CotizacionAFBaseFlow {
       escenario.Deducible,
       escenario.FrecuenciaPago,
     );
-    await this.pasoTresCotizacion.resumenCotizacion(
+    const tarifaAplicable = await this.pasoTresCotizacion.resumenCotizacion(
       escenario.IdiomaCotizacion,
+      opciones.validarTarifaAplicable,
     );
     await this.pasoCuatroResumenCotizacion.resumenPlanesCot(
       escenario.IdiomaCotizacion,
@@ -150,6 +162,12 @@ export class CotizacionAFBaseFlow {
       );
     }
 
+    if (opciones.asegurarSinBMI) {
+      await this.pasoOnceAplicacionCompleta.ValidarDisponibleParaPagoSinBMI(
+        escenario.IdiomaCotizacion,
+      );
+    }
+
     await this.pasoOnceAplicacionCompleta.CapturarAplicacionCompleta();
     await this.pasoDoceRegistrarInformacionPago.CapturarInformacionPago();
     const confirmacion = await this.pasoTreceMetodoPago.CapturarMetodoPago(
@@ -159,17 +177,20 @@ export class CotizacionAFBaseFlow {
       escenario,
       confirmacion,
     );
-    await guardarLogPoliza({
-      numeroFlujo,
-      escenario: `${escenario.EscenarioPrueba} ${escenario.IdiomaCotizacion}`,
-      nombre: confirmacion.nombreTitular,
-      poliza: confirmacion.numeroPoliza,
-    });
+    if (opciones.registrarLogPoliza !== false) {
+      await guardarLogPoliza({
+        numeroFlujo,
+        escenario: `${escenario.EscenarioPrueba} ${escenario.IdiomaCotizacion}`,
+        nombre: confirmacion.nombreTitular,
+        poliza: confirmacion.numeroPoliza,
+      });
+    }
 
     return {
       resultado: "Emision",
       nombreTitular: confirmacion.nombreTitular,
       numeroPoliza: confirmacion.numeroPoliza,
+      tarifaAplicable,
       datosCotizacion,
     };
   }

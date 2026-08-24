@@ -15,7 +15,7 @@ Reglas de activación:
 
 | Hoja | Estado | Uso |
 |---|---|---|
-| `ConfiguracionesPlan` | Activa | 24 combinaciones válidas de plan, red, deducible y frecuencia. |
+| `ConfiguracionesPlan` | Activa | 32 combinaciones válidas de plan, red, deducible y frecuencia. |
 | `PerfilesCotizacion` | Activa | Ocho perfiles: seis familiares y dos individuales. |
 | `CotizadorAF` | Referencia heredada | Conserva los escenarios anteriores, pero los specs actuales ya no la consumen. |
 | `EmisionAF` | Activa | Genera escenarios de emisión Claims. |
@@ -23,32 +23,60 @@ Reglas de activación:
 
 ## Generación de la matriz
 
-`GenerarEscenariosCotizador` calcula `ConfiguracionesPlan × PerfilesCotizacion`.
-Con 24 configuraciones y ocho perfiles se obtienen 192 cotizaciones. Al usar
-Chromium y Firefox, Playwright registra 384 ejecuciones del cotizador. La
-emisión Claims agrega una prueba por navegador.
+`GenerarEscenariosCotizador` calcula `ConfiguracionesPlan × PerfilesCotizacion
+× Esp/Eng/Port`. Con 32 configuraciones, ocho perfiles y tres idiomas se
+obtienen 768 cotizaciones: 576 familiares y 192 individuales. La emisión
+integrada ejecuta las 384 combinaciones cuyo resultado esperado es `Emision`
+por cada escenario de Claims. Validación de tarifas agrega los mismos 384
+escenarios de emisión por navegador y, dentro de cada test, recorre todos los
+países disponibles en la UI. Al usar Chromium y Firefox, la suite registra 3246
+tests al sumar Aplicación, Claims, tarifas y 87 reglas/contratos por proyecto; la
+cantidad real de casos de tarifa es dinámica: `países × 384 × navegadores`.
 
 Antes de registrar los tests se valida:
 
-- cobertura exacta de las seis parejas plan/red y los cuatro deducibles;
+- cobertura exacta de las ocho parejas plan/red y los cuatro deducibles;
 - unicidad de identificadores;
 - cantidad de dependientes coherente con `1`, `2` o `3+`;
 - cónyuge obligatorio en perfiles familiares;
 - consistencia entre `ResultadoEsperado` y `ObjetivoBMI`;
 - ausencia de dependientes en perfiles individuales.
 
+Validación de tarifas no agrega otra hoja ni duplica configuraciones. Reutiliza
+los perfiles cuyo `ResultadoEsperado` es `Emision` y cuyo `ObjetivoBMI` es
+`Ninguno`; el catálogo de países se lee de `PaisResidenciaSelect` al comenzar
+cada proyecto de navegador.
+
+## Catálogo crítico para CI/CD
+
+`src/configuraciones/escenariosCI.ts` selecciona por identificadores de perfil,
+configuración e idioma; no crea ni modifica escenarios. El catálogo contiene:
+
+- dos smoke de alta señal;
+- ocho escenarios de Aplicación distribuidos en cuatro slots nocturnos;
+- una integración familiar AF a Claims;
+- una variante individual para la muestra de tarifas.
+
+En conjunto, los slots nocturnos deben conservar ocho perfiles, ocho parejas
+plan/red, cuatro frecuencias, cuatro deducibles, tres idiomas y los resultados
+Emisión/BMI. Cuatro
+pruebas `REG-CI` validan esas invariantes antes de abrir un navegador. Si cambia
+un identificador del Excel, debe actualizarse conscientemente el catálogo y su
+contrato; no se debe ampliar el calendario a toda la matriz para compensarlo.
+
 ## Hoja `ConfiguracionesPlan`
 
 | Encabezado | Uso |
 |---|---|
 | `ConfiguracionPlan` | Identificador legible y único. |
-| `CotizarPlan` | `Superior`, `Optima` o `Vital`. |
+| `CotizarPlan` | `Superior`, `Optima`, `Vital` o `Protect`. |
 | `RedProveedores` | Red válida para el plan. |
 | `Deducible` | Texto exacto de la opción de deducible. |
 | `FrecuenciaPago` | Frecuencia configurada para la ejecución. |
 
-Las parejas válidas son Superior–Ultra/Open, Optima–Ultra/Plus y
-Vital–Plus/Core. Cada pareja se combina con los cuatro deducibles admitidos.
+Las parejas válidas son Superior–Ultra/Open, Optima–Ultra/Plus,
+Vital–Plus/Core y Protect–Sin cobertura dentro de EE. UU./Core. Cada pareja
+se combina con los cuatro deducibles admitidos.
 
 ## Hoja `PerfilesCotizacion`
 
@@ -68,6 +96,18 @@ normal e individual BMI. Los valores `Dependiente1`…`Dependiente5` siguen
 siendo válidos para capturar estatura y peso fuera de rango, pero no forman
 parte de la matriz activa: su resultado se validará en un flujo adicional
 específico para dependientes.
+
+`IdiomaCotizacion` se conserva en la hoja como dato de referencia heredado y
+continúa validándose, pero ya no limita el idioma del perfil. El generador
+produce cada perfil en `Esp`, `Eng` y `Port` y asigna el idioma concreto al
+escenario generado. Por ello no se deben duplicar perfiles para agregar
+cobertura lingüística.
+
+Los perfiles de emisión directa mantienen ambos cuestionarios en `No`. Una
+respuesta afirmativa ya no se usa como variación aleatoria de un caso normal,
+porque las HU 4 y 5 obligan a enviar ese recorrido a UW. Las edades y medidas
+por defecto también son deterministas: titular/cónyuge de 35 años con
+170 cm/65 kg, e hijos de 10 años con 135 cm/32 kg.
 
 ## Hoja `CotizadorAF` (referencia heredada)
 

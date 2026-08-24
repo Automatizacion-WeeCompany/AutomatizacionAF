@@ -8,6 +8,8 @@ Este directorio contiene la referencia operativa y de mantenimiento de Automatiz
 | [Ejecución](EJECUCION.md) | Instalación, comandos, filtros y solución de problemas. | Personas que ejecutan o diagnostican la suite. |
 | [Datos de prueba](DATOS-DE-PRUEBA.md) | Libro Excel, hojas, columnas, valores y mantenimiento. | QA funcional y QA Automation. |
 | [Estrategia de pruebas](ESTRATEGIA-DE-PRUEBAS.md) | Cobertura, criterios, riesgos y quality gates. | Equipo QA y responsables de entrega. |
+| [Jerarquía de pruebas](JERARQUIA-DE-PRUEBAS.md) | Organización por intención, identificadores, etiquetas y contrato de preservación. | QA funcional y QA Automation. |
+| [Reglas de suscripción](REGLAS-DE-SUSCRIPCION.md) | Árbol de edad, BMI, diagnósticos, UW, rechazos y bandejas. | QA funcional, QA Automation y desarrollo. |
 | [Evidencias y reportes](EVIDENCIAS-Y-REPORTES.md) | Ubicaciones, generación, lectura y retención. | QA, soporte y auditoría. |
 | [Seguridad](SEGURIDAD.md) | Secretos, datos personales y manejo de artefactos. | Todo contribuidor. |
 | [Operación y mantenimiento](OPERACION-Y-MANTENIMIENTO.md) | Dependencias, Sonar, CI propuesto y mantenimiento periódico. | Maintainers. |
@@ -21,8 +23,8 @@ Este directorio contiene la referencia operativa y de mantenimiento de Automatiz
 | Comandos y dependencias | `package.json` y `package-lock.json` |
 | Descubrimiento y proyectos | `playwright.config.ts` → `src/configuraciones/playwright.config.ts` |
 | Escenarios ejecutables | `src/datos/SuitePruebas.xlsx` |
-| Orquestación de casos | `src/tests/cotizacionesAF.spec.ts` |
-| Reglas de negocio automatizadas | `src/flows/` |
+| Orquestación de casos | `src/tests/reglas/`, `aplicacion/`, `integracion/` y `matriz-comercial/` |
+| Reglas de negocio automatizadas | `src/utilidades/ReglasSuscripcion.ts` y `src/flows/` |
 | Selectores y acciones UI | `src/paginas/` |
 | Contratos de texto | `src/textosEsperados/` y `src/configuraciones/validacionesPantallas.ts` |
 

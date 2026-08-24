@@ -28,6 +28,7 @@ const REDES_POR_PLAN: Record<string, Set<string>> = {
   Superior: new Set(['Ultra', 'Open']),
   Optima: new Set(['Ultra', 'Plus']),
   Vital: new Set(['Plus', 'Core']),
+  Protect: new Set(['Sin cobertura dentro de EE. UU.', 'Core']),
 };
 const SEXOS = new Set(['Masculino', 'Femenino']);
 const ESTADOS_CIVILES = new Set(['Casado(a)', 'Soltero(a)']);
