@@ -141,9 +141,13 @@ export class ContextoDatosCotizacion {
 
           const id = elemento.id;
           const etiquetaFor = id
-            ? document.querySelector<HTMLLabelElement>(
-                `label[for="${CSS.escape(id)}"]`,
-              )?.textContent
+            ? Array.from(
+                document.querySelectorAll<HTMLLabelElement>(
+                  `label[for="${CSS.escape(id)}"]`,
+                ),
+              )
+                .map((label) => label.textContent?.trim() ?? "")
+                .find(Boolean)
             : undefined;
           const etiqueta =
             etiquetaFor?.trim() ||
@@ -196,6 +200,46 @@ export class ContextoDatosCotizacion {
           });
         };
 
+        const capturarControlesVisibles = () => {
+          const controles = document.querySelectorAll<HTMLElement>(
+            "input, select, textarea",
+          );
+
+          for (const control of Array.from(controles)) {
+            const campo = control as HTMLInputElement | HTMLSelectElement;
+            const esArchivoConValor =
+              campo instanceof HTMLInputElement &&
+              campo.type === "file" &&
+              Boolean(campo.files?.length);
+            const esSeleccionMarcada =
+              campo instanceof HTMLInputElement &&
+              ["radio", "checkbox"].includes(campo.type) &&
+              campo.checked &&
+              Array.from(
+                document.querySelectorAll<HTMLLabelElement>(
+                  `label[for="${CSS.escape(campo.id)}"]`,
+                ),
+              ).some((etiqueta) => etiqueta.getClientRects().length > 0);
+            const visible = control.getClientRects().length > 0;
+
+            if (!visible && !esArchivoConValor && !esSeleccionMarcada) {
+              continue;
+            }
+            if (
+              campo instanceof HTMLInputElement &&
+              !["radio", "checkbox", "file"].includes(campo.type) &&
+              !campo.value.trim()
+            ) {
+              continue;
+            }
+            if (campo instanceof HTMLSelectElement && !campo.value) {
+              continue;
+            }
+
+            enviar(control);
+          }
+        };
+
         document.addEventListener(
           "change",
           (evento) => {
@@ -214,7 +258,13 @@ export class ContextoDatosCotizacion {
             }
 
             const opcionPersonalizada = evento.target.closest<HTMLElement>(
-              '[role="option"], .iti__country',
+              [
+                '[role="option"]',
+                ".iti__country",
+                ".btnActionNameUno",
+                ".btnActionNameDos",
+                ".btnActionNameTres",
+              ].join(", "),
             );
             if (opcionPersonalizada) {
               enviar(opcionPersonalizada, true);
@@ -230,6 +280,25 @@ export class ContextoDatosCotizacion {
               : null;
             if (campoAsociado) {
               queueMicrotask(() => enviar(campoAsociado));
+            }
+
+            const confirmaDatos = evento.target.closest<HTMLElement>(
+              [
+                'button[id^="AddQuestion_"]',
+                "#btnGuardarProcesoPaso2Parte1",
+                "#btnGuardarProcesoPaso2Parte2",
+                "#btnGuardarEspecialistaMedico",
+                "#btnGuardarProcesoPaso1",
+                "#saveBeneficiario",
+                "#saveDatos",
+                "#GoNextStepOne",
+                "#GostepTwo",
+                "#GostepFour",
+                "#GostepFive",
+              ].join(", "),
+            );
+            if (confirmaDatos) {
+              capturarControlesVisibles();
             }
           },
           true,

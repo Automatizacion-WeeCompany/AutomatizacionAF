@@ -1,0 +1,83 @@
+name: Cobertura semanal de compatibilidad y tarifas
+
+on:
+  schedule:
+    - cron: "23 3 * * 6"
+      timezone: "America/Mexico_City"
+  workflow_dispatch:
+    inputs:
+      ambiente:
+        description: Ambiente de pruebas
+        required: true
+        default: qa
+        type: choice
+        options:
+          - qa
+          - staging
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ambiente-af-semanal-${{ inputs.ambiente || 'qa' }}
+  cancel-in-progress: false
+
+jobs:
+  cobertura-semanal:
+    name: Firefox smoke y muestra de tarifas
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    env:
+      CI: "true"
+      AMBIENTE: ${{ inputs.ambiente || 'qa' }}
+      BASE_URL_QA: ${{ vars.BASE_URL_QA }}
+      BASE_URL_STAGING: ${{ vars.BASE_URL_STAGING }}
+      TEST_USERNAME: ${{ secrets.TEST_USERNAME }}
+      TEST_PASSWORD: ${{ secrets.TEST_PASSWORD }}
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v6
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Compilar TypeScript
+        run: npm run build
+
+      - name: Ejecutar reglas de negocio
+        run: npm run test:ci:reglas
+
+      - name: Instalar Chromium y Firefox
+        id: navegadores
+        run: npx playwright install --with-deps chromium firefox
+
+      - name: Ejecutar smoke en Firefox
+        env:
+          CI_BROWSER: Firefox
+        run: npm run test:ci
+
+      - name: Validar tarifa crítica en cinco países
+        if: ${{ !cancelled() && steps.navegadores.outcome == 'success' }}
+        env:
+          CI_BROWSER: Chromium
+        run: npm run test:ci:tarifas
+
+      - name: Guardar diagnóstico semanal
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v5
+        with:
+          name: diagnostico-semanal-${{ github.run_number }}-${{ github.run_attempt }}
+          path: |
+            test-results/
+            Evidencias/reportes-ci/
+            Evidencias/validacion-tarifas/
+          retention-days: 7
+          if-no-files-found: ignore

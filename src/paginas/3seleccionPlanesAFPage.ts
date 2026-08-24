@@ -1,4 +1,4 @@
-import { Page, expect } from "@playwright/test";
+import { Page } from "@playwright/test";
 import { esperarOpcionesEnSelect } from "../utilidades/SelectAleatoreo";
 
 export class SeleccionarPlanesAFPage {
@@ -37,85 +37,62 @@ export class SeleccionarPlanesAFPage {
       .nth(0)
       .click();
   }
+  async seleccionarPlanProtect() {
+    await this.page
+      .frameLocator("iframe#ifCotizador")
+      .locator("#changePlan")
+      .click();
+    await this.page
+      .frameLocator("iframe#ifCotizador")
+      .locator('label[for="Protect"]')
+      .nth(0)
+      .click();
+  }
+
+  private async seleccionarRedProveedores(textoRed: string) {
+    const iframe = this.page.frameLocator("iframe#ifCotizador");
+    const select = iframe.locator("#redesDeProveedor0");
+    await esperarOpcionesEnSelect(select, 1, 15000);
+
+    const valorRed = await select.locator("option").evaluateAll(
+      (opciones, textoBuscado) =>
+        opciones.find((opcion) =>
+          opcion.textContent?.trim().includes(textoBuscado),
+        )?.getAttribute("value") ?? "",
+      textoRed,
+    );
+
+    if (!valorRed) {
+      throw new Error(
+        `No se encontró ninguna red de proveedores que contenga "${textoRed}"`,
+      );
+    }
+
+    await select.selectOption(valorRed);
+
+    // El cambio de red dispara una recarga AJAX que puede reemplazar el select
+    // y dejarlo transitoriamente vacío. La configuración completa se valida
+    // después de seleccionar también el deducible y la frecuencia de pago.
+  }
+
   async seleccionaRedProveedoresUltra() {
-    const iframe = this.page.frameLocator("iframe#ifCotizador");
-    const select = iframe.locator("#redesDeProveedor0");
-    // 1. Esperamos a que las opciones estén cargadas (que haya más de una)
-    await expect(select.locator("option")).toHaveCount(3, { timeout: 10000 });
-    // 2. Buscamos el VALOR de la opción que contiene "Ultra"
-    // Usamos filter para encontrar la opción que coincida con el texto (aunque tenga espacios o estrellas)
-    const valorUltra = await select
-      .locator("option")
-      .filter({ hasText: /Ultra/ })
-      .getAttribute("value");
-    if (valorUltra) {
-      // 3. Seleccionamos por el valor encontrado
-      await select.selectOption(valorUltra);
-    } else {
-      throw new Error("No se encontró ninguna opción que contenga 'Ultra'");
-    }
-    // Validación final
-    await expect(select).toHaveValue(valorUltra);
+    await this.seleccionarRedProveedores("Ultra");
   }
+
   async seleccionaRedProveedoresOpen() {
-    const iframe = this.page.frameLocator("iframe#ifCotizador");
-    const select = iframe.locator("#redesDeProveedor0");
-    // 1. Esperamos a que las opciones estén cargadas (que haya más de una)
-    await expect(select.locator("option")).toHaveCount(3, { timeout: 10000 });
-    // 2. Buscamos el VALOR de la opción que contiene "Ultra"
-    // Usamos filter para encontrar la opción que coincida con el texto (aunque tenga espacios o estrellas)
-    const valorOpen = await select
-      .locator("option")
-      .filter({ hasText: /Open/ })
-      .getAttribute("value");
-    if (valorOpen) {
-      // 3. Seleccionamos por el valor encontrado
-      await select.selectOption(valorOpen);
-    } else {
-      throw new Error("No se encontró ninguna opción que contenga 'Open'");
-    }
-    // Validación final
-    await expect(select).toHaveValue(valorOpen);
+    await this.seleccionarRedProveedores("Open");
   }
+
   async seleccionaRedProveedoresPlus() {
-    const iframe = this.page.frameLocator("iframe#ifCotizador");
-    const select = iframe.locator("#redesDeProveedor0");
-    // 1. Esperamos a que las opciones estén cargadas (que haya más de una)
-    await expect(select.locator("option")).toHaveCount(3, { timeout: 10000 });
-    // 2. Buscamos el VALOR de la opción que contiene "Ultra"
-    // Usamos filter para encontrar la opción que coincida con el texto (aunque tenga espacios o estrellas)
-    const valorPlus = await select
-      .locator("option")
-      .filter({ hasText: /Plus★/ })
-      .getAttribute("value");
-    if (valorPlus) {
-      // 3. Seleccionamos por el valor encontrado
-      await select.selectOption(valorPlus);
-    } else {
-      throw new Error("No se encontró ninguna opción que contenga 'Plus'");
-    }
-    // Validación final
-    await expect(select).toHaveValue(valorPlus);
+    await this.seleccionarRedProveedores("Plus");
   }
+
   async seleccionaRedProveedoresCore() {
-    const iframe = this.page.frameLocator("iframe#ifCotizador");
-    const select = iframe.locator("#redesDeProveedor0");
-    // 1. Esperamos a que las opciones estén cargadas (que haya más de una)
-    await expect(select.locator("option")).toHaveCount(3, { timeout: 10000 });
-    // 2. Buscamos el VALOR de la opción que contiene "Ultra"
-    // Usamos filter para encontrar la opción que coincida con el texto (aunque tenga espacios o estrellas)
-    const valorCore = await select
-      .locator("option")
-      .filter({ hasText: /Core/ })
-      .getAttribute("value");
-    if (valorCore) {
-      // 3. Seleccionamos por el valor encontrado
-      await select.selectOption(valorCore);
-    } else {
-      throw new Error("No se encontró ninguna opción que contenga 'Core'");
-    }
-    // Validación final
-    await expect(select).toHaveValue(valorCore);
+    await this.seleccionarRedProveedores("Core");
+  }
+
+  async seleccionaRedProveedoresSinCoberturaEEUU(textoRed: string) {
+    await this.seleccionarRedProveedores(textoRed);
   }
   async seleccionaDeducible(Deducible: string) {
     await this.page

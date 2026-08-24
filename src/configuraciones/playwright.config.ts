@@ -28,13 +28,21 @@ export default defineConfig({
   fullyParallel: false,
   workers: isCI ? ciWorkers : undefined,
   retries: isCI ? 1 : 0,
-  reporter: [
-    ['list'],
-    ['html', {
-      outputFolder: path.join(__dirname, '../../playwright-report'),
-      open: 'never',
-    }],
-  ],
+  reporter: isCI
+    ? [
+        ['dot'],
+        ['html', {
+          outputFolder: path.join(__dirname, '../../playwright-report'),
+          open: 'never',
+        }],
+      ]
+    : [
+        ['list'],
+        ['html', {
+          outputFolder: path.join(__dirname, '../../playwright-report'),
+          open: 'never',
+        }],
+      ],
   use: {
     baseURL: 'https://weeqp.azurewebsites.net/QP/WeeClaims',
     headless: isCI,
@@ -42,7 +50,7 @@ export default defineConfig({
     navigationTimeout: 60_000,
     trace: isCI ? 'on-first-retry' : 'retain-on-failure',
     screenshot: 'only-on-failure',
-    video: isCI ? 'on-first-retry' : 'retain-on-failure',
+    video: 'retain-on-failure',
   },
   projects: [
     {

@@ -6,11 +6,11 @@
 
 | Evidencia | Política |
 |---|---|
-| Reportero de consola | `list` en la configuración base; `dot` en el smoke CI/CD. |
-| Reporte HTML | Siempre; `playwright-report/` en la configuración base y `Evidencias/reportes-ci/` en el smoke. |
+| Reportero de consola | `list` en local; `dot` en CI/CD; reglas rápidas usan `dot` sin HTML. |
+| Reporte HTML | `playwright-report/` en local y `Evidencias/reportes-ci/<perfil>/` en perfiles CI. |
 | Trace | Se conserva en falla local y en el primer reintento de CI. |
 | Screenshot | Solo en falla. |
-| Video | Se conserva en falla local y en el primer reintento de CI. |
+| Video | Solo se conserva cuando el resultado final es fallido. |
 | Apertura automática del HTML | Deshabilitada. |
 
 Los artefactos permanecen disponibles en disco, pero los mensajes informativos no se imprimen en CI/CD. `CI_VERBOSE=1` permite reactivarlos temporalmente sin cambiar código.
@@ -25,13 +25,19 @@ Salida HTML de la configuración local. Incluye `index.html` y recursos asociado
 npx playwright show-report playwright-report
 ```
 
-### `Evidencias/reportes-ci/`
+### `Evidencias/reportes-ci/<perfil>/`
 
-Salida HTML del smoke CI/CD. Se genera como archivo local del runner y está ignorada por Git. La consola solo muestra puntos, fallas y el resumen de Playwright; el detalle completo permanece en este reporte y en `test-results/`.
+Salida HTML de `smoke`, `nightly`, `critical`, `integration` o `tarifas`. Se
+genera como archivo local del runner y está ignorada por Git. La consola solo
+muestra puntos, fallas y el resumen. GitHub Actions sube este diagnóstico
+únicamente cuando falla la ejecución, con retención de siete días.
 
 ### `test-results/`
 
-Artefactos por test, como trace, video, screenshot y contexto de error. Es una salida temporal y está ignorada por Git.
+Artefactos por test, como trace, video, screenshot y contexto de error. Los
+perfiles CI escriben en `test-results/<perfil>/` para que una segunda fase del
+mismo job no borre el diagnóstico de la primera. Es una salida temporal y está
+ignorada por Git.
 
 ### `Evidencias/comparaciones-datos/`
 
@@ -48,6 +54,24 @@ El archivo contiene identificador y fecha de ejecución, escenario, póliza, est
 - `Error`: la lectura se interrumpió; se conserva lo comparado hasta ese momento y la etapa que falló.
 
 Los campos sin valor capturado se registran como `NoComparable` y permanecen visibles en el resumen. Esta ruta está ignorada por Git.
+
+Cada campo puede tener estado `Coincide`, `CoincidenciaParcial`, `Diferente` o `NoComparable`. `CoincidenciaParcial` se usa cuando una opción de catálogo o un label representa el mismo valor en otro idioma, por ejemplo `ANTIGUA AND BARBUDA` frente a `ANTIGUA Y BARBUDA`. Estas coincidencias se contabilizan por separado en `coincidenciasParciales`, mantienen la ejecución como exitosa y conservan ambos textos para auditoría. Los valores escritos por el usuario no usan esta tolerancia.
+
+Los nombres internos de controles —por ejemplo `generoRadio` o `SeguroMedicoExistenteRadio_1`— no son valores comparables. El registro usa el texto visible asociado al control; si una evidencia antigua contiene únicamente el nombre técnico, el comparador recurre a la configuración funcional. Para personas dependientes, el reporte conserva el orden esperado del cotizador aunque Claims las presente en otro orden.
+
+### `Evidencias/validacion-tarifas/`
+
+Cada proyecto y worker escribe una carpeta inmutable por ejecución con tres
+formatos:
+
+- `.ndjson`: log incremental, una línea por país y variante, para conservar el avance ante una interrupción;
+- `.json`: reporte final con resumen global, resumen por país, resumen por variante y todos los resultados;
+- `.csv`: vista tabular para filtrar país, tipo de póliza, composición familiar, plan, red, deducible, frecuencia, tarifa, folio y estado.
+
+Los estados son `Exitosa`, `SinTarifa`, `EvaluacionBMI` y `Error`. El indicador
+`coberturaCompleta` sólo es verdadero cuando cada combinación esperada se ejecutó
+una vez, produjo tarifa y folio, y no hubo BMI, errores ni duplicados. El reporte
+no guarda credenciales ni el nombre generado del titular.
 
 ### `src/textosEsperados/textosFaltantes/`
 
@@ -102,6 +126,11 @@ No uses solo el screenshot para concluir una causa cuando el trace está disponi
 
 La política definitiva debe alinearse con protección de datos y capacidad de almacenamiento de la organización.
 
+La regresión manual `full` es la excepción: cada shard produce un reporte blob,
+los blobs se conservan un día y el HTML consolidado se publica durante 14 días.
+Las ejecuciones exitosas automáticas no suben video, trace, screenshots ni HTML,
+lo que evita saturar almacenamiento y consola.
+
 ## Reglas de seguridad
 
 - No adjuntar reportes sin revisar usuarios, folios, documentos y datos personales.
@@ -113,11 +142,9 @@ La política definitiva debe alinearse con protección de datos y capacidad de a
 
 ## Criterios para CI
 
-Cuando se implemente CI:
-
-- publicar HTML, trace, screenshot y video como artefactos del job;
-- usar retención corta por defecto;
-- subir artefactos incluso si el test falla;
-- no versionar salidas generadas;
-- separar resultados por navegador y ejecución;
-- aplicar enmascaramiento y secretos protegidos.
+- Publicar HTML, trace, screenshot y video sólo para diagnóstico de fallas.
+- Usar siete días de retención en perfiles automáticos y 14 en el reporte `full`.
+- No versionar salidas generadas.
+- Separar resultados por perfil, navegador y ejecución.
+- Mantener la consola compacta con `dot`; usar `CI_VERBOSE=1` sólo al diagnosticar.
+- Aplicar enmascaramiento y secretos protegidos antes de compartir artefactos.

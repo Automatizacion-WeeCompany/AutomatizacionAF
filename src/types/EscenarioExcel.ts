@@ -1,4 +1,5 @@
-export type IdiomaCotizacionExcel = "Esp" | "Eng" | "Port";
+export const IDIOMAS_COTIZACION = ["Esp", "Eng", "Port"] as const;
+export type IdiomaCotizacionExcel = (typeof IDIOMAS_COTIZACION)[number];
 export type TipoPolizaExcel = "Familiar" | "Individual";
 export type ResultadoEsperadoCotizacion = "Emision" | "EvaluacionBMI";
 export type ObjetivoBMI =

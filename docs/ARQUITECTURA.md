@@ -14,6 +14,7 @@ flowchart TD
     X --> PC["PerfilesCotizacion"]
     CP --> G["GenerarEscenariosCotizador"]
     PC --> G
+    I["Esp / Eng / Port"] --> G
     G --> L["ObtencionDeDatos"]
     L --> S["Specs Playwright"]
     S --> F["Flows de negocio"]
@@ -36,7 +37,7 @@ Responsabilidad:
 - Instanciar y llamar flows en el orden del escenario.
 - Seleccionar el alcance funcional del caso.
 
-No deben contener selectores, generación detallada de datos ni lógica extensa de pantalla. Los recorridos están separados en `cotizacionesFamiliaresAF.spec.ts`, `cotizacionesIndividualesAF.spec.ts` y `emisionClaimsAF.spec.ts`.
+No deben contener selectores, generación detallada de datos ni lógica extensa de pantalla. Los specs se agrupan por intención en `reglas/`, `aplicacion/`, `integracion/` y `matriz-comercial/`; consulta [Jerarquía de pruebas](JERARQUIA-DE-PRUEBAS.md). Esta separación no duplica los flows Familiar e Individual ni modifica sus bifurcaciones.
 
 ### Flows: `src/flows/`
 
@@ -145,15 +146,32 @@ notification will be sent via email once a decision has been made.`
 7. Recorre y compara Información general, Coberturas, Cuestionario, Plan y frecuencia, Idioma, Limitaciones y Contrato.
 8. Guarda un JSON independiente por ejecución, incluso si existe una diferencia o se interrumpe la lectura de una pestaña.
 
-El comparador conserva el valor esperado, el obtenido, su origen en ambas aplicaciones y un estado por campo. Los datos no capturados se marcan como `NoComparable`; no se convierten silenciosamente en coincidencias. Al final agrega resúmenes por pestaña y de toda la póliza.
+El comparador conserva el valor esperado, el obtenido, su origen en ambas aplicaciones y un estado por campo. Los datos no capturados se marcan como `NoComparable`; no se convierten silenciosamente en coincidencias. Las selecciones de catálogos y labels que son equivalentes pero cambian de idioma se registran como `CoincidenciaParcial` y no provocan una falla. Los campos de texto libre continúan usando igualdad estricta. Al final agrega resúmenes por pestaña y de toda la póliza.
+
+En radios y checkboxes se captura el primer `label[for]` con texto visible, omitiendo labels puramente gráficos. Los dependientes se emparejan entre cotizador y Claims por nombre, apellido y fecha de nacimiento; el orden visual de los acordeones no forma parte de la comparación.
+
+### Validación de tarifas AF
+
+Este recorrido es independiente de Cotizador y Emisión Claims, aunque reutiliza
+`CotizacionAFBaseFlow` y sus Page Objects. En el `beforeAll` obtiene directamente
+las opciones válidas de `#PaisResidenciaSelect`; no mantiene un catálogo estático.
+Después calcula `países disponibles × escenarios de emisión`, que incluye las 32
+configuraciones comerciales, las tres composiciones familiares y el perfil
+individual. Los perfiles cuyo objetivo es BMI se excluyen antes de la ejecución.
+
+Cada caso selecciona el país por su identificador, valida una tarifa monetaria
+positiva en el resumen, recorre solicitud, cuestionarios, firmas y pago, comprueba
+que nunca aparezca la salida de evaluación BMI y exige un folio de póliza de 12
+dígitos. El log incremental y los reportes finales permiten auditar cobertura por
+país y por variante aun cuando otro caso falle.
 
 ## Flujo de datos
 
 1. Playwright importa los specs durante el descubrimiento.
 2. `ExtraerDatosExcel.obtenerEscenariosCotizador()` abre `SuitePruebas.xlsx`.
 3. `CargarExcel` transforma `ConfiguracionesPlan` y `PerfilesCotizacion` en objetos.
-4. `GenerarEscenariosCotizador` valida ambos catálogos y calcula su producto cartesiano.
-5. Los specs filtran los escenarios generados por `TipoPoliza` y los pasan al flow correspondiente.
+4. `GenerarEscenariosCotizador` valida ambos catálogos y calcula `PerfilesCotizacion × ConfiguracionesPlan × Esp/Eng/Port`.
+5. Los specs filtran los escenarios generados por `TipoPoliza` y resultado, y los pasan al flow correspondiente; Validación de tarifas agrega el catálogo de países leído de la UI.
 6. Los flows interpretan cadenas como `Esp`, `Familiar`, `Individual`, `Si`, plan, red y frecuencia.
 7. Los Page Objects ejecutan acciones en la interfaz.
 8. Playwright captura evidencias conforme a la configuración.
