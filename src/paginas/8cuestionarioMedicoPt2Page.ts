@@ -13,8 +13,14 @@ export class CuestionarioMedicoPt2Page {
     await expect(opcion).toBeChecked();
   }
 
-  async SeleccionarTodasLasRespuestasNo() {
+  async SeleccionarTodasLasRespuestasNo(
+    preguntasExceptuadas: number[] = [],
+  ) {
+    const excepciones = new Set(preguntasExceptuadas);
     for (let numero = 1; numero <= 18; numero++) {
+      if (excepciones.has(numero)) {
+        continue;
+      }
       await this.seleccionarRespuesta(`optNoExiste_${numero}`);
     }
   }

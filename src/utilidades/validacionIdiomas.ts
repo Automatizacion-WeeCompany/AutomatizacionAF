@@ -25,7 +25,7 @@ const OPCIONES_POR_IDIOMA = {
         'Cónyuge/Pareja Doméstica': {
             Esp: 'Cónyuge/Pareja Doméstica',
             Eng: 'Spouse/Domestic Partner',
-            Port: 'Cônjuge/Parceiro Doméstico'
+            Port: 'Cônjuge/Parceiro(a) Doméstico(a)'
         }
     },
     Sustancia: {
@@ -33,6 +33,13 @@ const OPCIONES_POR_IDIOMA = {
             Esp: 'Productos de Nicotina',
             Eng: 'Nicotine Products',
             Port: 'Produtos de Nicotina'
+        }
+    },
+    RedProveedores: {
+        'Sin cobertura dentro de EE. UU.': {
+            Esp: 'Sin cobertura dentro de EE. UU.',
+            Eng: 'No Coverage within US',
+            Port: 'Sem cobertura nos EUA'
         }
     }
 } as const;

@@ -3,6 +3,7 @@ import { InicioSesionAFPage } from "../paginas/inicioSesionAFPage";
 import { HomeAFPage } from "../paginas/homeAFPage";
 import { CotizacionesPropuestasAFPage } from "../paginas/1cotizacionesPropuestasAFPage";
 import { InicioCotizacionDatosPersonalesAFPage } from "../paginas/2inicioCotizacionDatosPersonalesAFPage";
+import { OpcionPaisResidencia } from "../types/ValidacionTarifas";
 import { SeleccionarPlanesAFPage } from "../paginas/3seleccionPlanesAFPage";
 import { ResumenCotizacionPage } from "../paginas/4resumenCotizacionPage";
 import { ResumenPlanesCotizadosPage } from "../paginas/5resumenCotizacionPage";
@@ -28,6 +29,10 @@ import {
 } from "@pages/14metodoPagoPage";
 import { agregarPersonaPT2Page } from "@pages/agregarPersonaPT2Page";
 import { registrarInfo } from "../utilidades/LoggerPruebas";
+import {
+  DATOS_ANTROPOMETRICOS_RECHAZO_BMI,
+  obtenerDatosAntropometricosSeguros,
+} from "../utilidades/DatosAntropometricosPrueba";
 
 const CONFIGURACION_IDIOMAS: Record<
   Idioma,
@@ -37,11 +42,6 @@ const CONFIGURACION_IDIOMAS: Record<
   Eng: { opcion: "ENG", textoConfirmacion: "Welcome" },
   Port: { opcion: "PORT", textoConfirmacion: "Bem-vindo" },
 };
-
-const DATOS_ANTROPOMETRICOS_RECHAZO_BMI = Object.freeze({
-  estaturaCm: 180,
-  pesoKg: 180,
-});
 
 type RespuestaBinaria = "Si" | "No";
 
@@ -160,12 +160,16 @@ export class PasoUnoDatosPersonalesFlow {
     TipoPoliza: string,
     ConyugePareja: string | undefined,
     HijosMenoresDe24: string,
+    paisResidencia?: OpcionPaisResidencia,
   ) {
     await this.CapturaDatosPersonalesPage.ingresaNombretitular();
     await this.CapturaDatosPersonalesPage.ingresaApellidoTitular();
     const edadTitular =
       await this.CapturaDatosPersonalesPage.ingresaEdadTitular();
-    await this.CapturaDatosPersonalesPage.seleccionaPaisRecidenciaTitular();
+    const paisSeleccionado =
+      await this.CapturaDatosPersonalesPage.seleccionaPaisRecidenciaTitular(
+        paisResidencia,
+      );
 
     let edadConyuge: number | undefined;
     switch (TipoPoliza) {
@@ -201,7 +205,7 @@ export class PasoUnoDatosPersonalesFlow {
     }
 
     await this.CapturaDatosPersonalesPage.clickBtnContinuar();
-    return { edadTitular, edadConyuge };
+    return { edadTitular, edadConyuge, paisSeleccionado };
   }
 }
 
@@ -217,10 +221,20 @@ export class PasoDosPlanesFlow {
     Deducible: string,
     FrecuenciaPago: string,
   ) {
+    const idioma = IdiomaCotizacion as Idioma;
+    const redProveedoresVisible =
+      RedProveedores === "Sin cobertura dentro de EE. UU."
+        ? obtenerOpcionPorIdioma(
+            "RedProveedores",
+            RedProveedores,
+            idioma,
+          )
+        : RedProveedores;
+
     await validarPantallaPorIdioma({
       page: this.page,
       pantalla: "SeleccionarPlanes",
-      idioma: IdiomaCotizacion as Idioma,
+      idioma,
     });
     switch (CotizarPlan) {
       case "Superior":
@@ -259,6 +273,20 @@ export class PasoDosPlanesFlow {
           );
         }
         break;
+      case "Protect":
+        await this.seleccionarPlanesPage.seleccionarPlanProtect();
+        if (RedProveedores === "Sin cobertura dentro de EE. UU.") {
+          await this.seleccionarPlanesPage.seleccionaRedProveedoresSinCoberturaEEUU(
+            redProveedoresVisible,
+          );
+        } else if (RedProveedores === "Core") {
+          await this.seleccionarPlanesPage.seleccionaRedProveedoresCore();
+        } else {
+          throw new Error(
+            "Red de proveedores no soportada revisar archivo de datos",
+          );
+        }
+        break;
       default:
         throw new Error("Plan no soportado revisar archivo de datos");
     }
@@ -282,7 +310,7 @@ export class PasoDosPlanesFlow {
         );
     }
     await this.seleccionarPlanesPage.asegurarConfiguracionPlan(
-      RedProveedores,
+      redProveedoresVisible,
       Deducible,
     );
     await this.seleccionarPlanesPage.clickBtnContinuar();
@@ -295,13 +323,20 @@ export class PasoTresCotizacionFlow {
     this.resumenCotizacionPage = new ResumenCotizacionPage(this.page);
   }
 
-  async resumenCotizacion(IdiomaCotizacion: string) {
+  async resumenCotizacion(
+    IdiomaCotizacion: string,
+    validarTarifaAplicable = false,
+  ) {
     await validarPantallaPorIdioma({
       page: this.page,
       pantalla: "ResumenCotizacion",
       idioma: IdiomaCotizacion as Idioma,
     });
+    const tarifaAplicable = validarTarifaAplicable
+      ? await this.resumenCotizacionPage.obtenerTarifaAplicable()
+      : undefined;
     await this.resumenCotizacionPage.ClickBtnContinuar();
+    return tarifaAplicable;
   }
 }
 
@@ -371,7 +406,7 @@ export class PasoCincoInformacionPersonalFlow {
     const datosAntropometricos =
       escenario.ObjetivoBMI === "Titular"
         ? DATOS_ANTROPOMETRICOS_RECHAZO_BMI
-        : undefined;
+        : obtenerDatosAntropometricosSeguros(edadTitular);
     await this.informacionPersonalPage.IngresaEstatura(
       datosAntropometricos?.estaturaCm,
     );
@@ -512,8 +547,13 @@ export class PasoCincoInformacionPersonalFlow {
     await this.informacionPersonalPage.ClickCheckSexoNacerDependienteFemenino();
     await this.informacionPersonalPage.ClickCheckEstadoCivilConyuge();
     await this.informacionPersonalPage.SeleccionaPaisNacimientoDependiente();
-    await this.informacionPersonalPage.IngresaEstaturaDependiente();
-    await this.informacionPersonalPage.IngresaPesoDependiente();
+    const datosAntropometricos = obtenerDatosAntropometricosSeguros(edadConyuge);
+    await this.informacionPersonalPage.IngresaEstaturaDependiente(
+      datosAntropometricos.estaturaCm,
+    );
+    await this.informacionPersonalPage.IngresaPesoDependiente(
+      datosAntropometricos.pesoKg,
+    );
     await this.informacionPersonalPage.IngresaTelefonoConyuge();
     await this.informacionPersonalPage.IngresaCorreoConyuge();
     await this.informacionPersonalPage.SeleccionaOcupacionConyuge(
@@ -582,8 +622,9 @@ export class PasoCincoInformacionPersonalFlow {
       await this.informacionPersonalPage.IngresaApellidoDependiente();
       await this.informacionPersonalPage.IngresaNombreDependiente();
       const esObjetivoBMI = objetivoBMI === `Dependiente${i + 1}`;
+      const edadDependiente = esObjetivoBMI ? 20 : 10;
       await this.informacionPersonalPage.IngresaFechaNacimientoDependiente(
-        esObjetivoBMI ? 20 : undefined,
+        edadDependiente,
       );
       if (!sexo || !sexosValidos.has(sexo)) {
         throw new Error(
@@ -594,7 +635,7 @@ export class PasoCincoInformacionPersonalFlow {
       await this.informacionPersonalPage.SeleccionaPaisNacimientoDependiente();
       const datosAntropometricos = esObjetivoBMI
         ? DATOS_ANTROPOMETRICOS_RECHAZO_BMI
-        : undefined;
+        : obtenerDatosAntropometricosSeguros(edadDependiente);
       await this.informacionPersonalPage.IngresaEstaturaDependiente(
         datosAntropometricos?.estaturaCm,
       );
@@ -731,190 +772,7 @@ export class PasoSieteCuestionarioMedicoFlow {
     this.agregarPersonaPT2Page = new agregarPersonaPT2Page(page);
   }
 
-  async CapturarCuestionarioMedicoP2(
-    IdiomaCotizacion: string,
-    CapturaCuestionarioMedico: string,
-  ) {
-    const respuestaCuestionario = normalizarRespuestaBinaria(
-      CapturaCuestionarioMedico,
-      "CapturaPreguntasPt2",
-    );
-    registrarInfo(`Cuestionario médico II configurado en: ${respuestaCuestionario}`);
-
-    if (respuestaCuestionario === "No") {
-      await this.cuestionarioMedicoPt2Page.SeleccionarTodasLasRespuestasNo();
-    } else {
-      await this.cuestionarioMedicoPt2Page.CheckSiPA();
-      await this.cuestionarioMedicoPt2Page.CheckSiPAAgregarPersona();
-      await this.agregarPersonaPT2Page.SiEligePersonaAfectadaPA();
-      await this.agregarPersonaPT2Page.SiFechaDiagnosticoPA();
-      await this.agregarPersonaPT2Page.SiTipoTumorCancerPA();
-      await this.agregarPersonaPT2Page.NoCheckQuimioRadioPA();
-      await this.agregarPersonaPT2Page.BtnAgregarPA();
-
-      await this.cuestionarioMedicoPt2Page.CheckSiPB();
-      await this.cuestionarioMedicoPt2Page.CheckSiPBAgregarPersona();
-      await this.agregarPersonaPT2Page.SiEligePersonaAfectadaPB();
-      await this.agregarPersonaPT2Page.SiFechaCirugiaPB();
-      await this.agregarPersonaPT2Page.DiagnosticoProceMedPB("diagnostico");
-      await this.agregarPersonaPT2Page.NoTratamientoActualPB();
-      await this.agregarPersonaPT2Page.CondicionActualPB("condicion");
-      await this.agregarPersonaPT2Page.BtnAgregarPB();
-
-      await this.cuestionarioMedicoPt2Page.CheckSiPC();
-      await this.cuestionarioMedicoPt2Page.CheckSiPCAgregarPersona();
-      await this.agregarPersonaPT2Page.SiEligePersonaAfectadaPC();
-      await this.agregarPersonaPT2Page.SiFechaDiagnosticoPC();
-      await this.agregarPersonaPT2Page.SiDiagnosticoPC();
-      await this.agregarPersonaPT2Page.SiTratamientoMedPC();
-      await this.agregarPersonaPT2Page.SiCondicionActPC();
-      await this.agregarPersonaPT2Page.BtnAgregarPC();
-
-      await this.cuestionarioMedicoPt2Page.CheckSiPD();
-      await this.cuestionarioMedicoPt2Page.CheckSiPDAgregarPersona();
-      await this.agregarPersonaPT2Page.SiEligePersonaAfectadaPD();
-      await this.agregarPersonaPT2Page.SiFechaDiagnosticoPD();
-      await this.agregarPersonaPT2Page.SiSintomasPD();
-      await this.agregarPersonaPT2Page.SiTratamientosPD();
-      await this.agregarPersonaPT2Page.SiCondicionPD();
-      await this.agregarPersonaPT2Page.SiDiagnosticoPD();
-      await this.agregarPersonaPT2Page.BtnAgregarPD();
-
-      await this.cuestionarioMedicoPt2Page.CheckSiPE();
-      await this.cuestionarioMedicoPt2Page.CheckSiPEAgregarPersona();
-      await this.agregarPersonaPT2Page.SiEligePersonaAfectadaPE();
-      await this.agregarPersonaPT2Page.SiFechaDiagnosticoPE();
-      await this.agregarPersonaPT2Page.SiDiagnosticoPE();
-      await this.agregarPersonaPT2Page.SiSintomasPE();
-      await this.agregarPersonaPT2Page.SiTratamientosPE();
-      await this.agregarPersonaPT2Page.SiCondicionPE();
-      await this.agregarPersonaPT2Page.BtnAgregarPE();
-
-      await this.cuestionarioMedicoPt2Page.CheckSiPF();
-      await this.cuestionarioMedicoPt2Page.CheckSiPFAgregarPersona();
-      await this.agregarPersonaPT2Page.SiEligePersonaAfectadaPF();
-      await this.agregarPersonaPT2Page.SiDiagnosticoPF();
-      await this.agregarPersonaPT2Page.SiTratamientosPF();
-      await this.agregarPersonaPT2Page.SiCondicionPF();
-      await this.agregarPersonaPT2Page.SiFechaDiagnosticoPF();
-      await this.agregarPersonaPT2Page.BtnAgregarPF();
-
-      await this.cuestionarioMedicoPt2Page.CheckSiPG();
-      await this.cuestionarioMedicoPt2Page.CheckSiPGAgregarPersona();
-      await this.agregarPersonaPT2Page.SiEligePersonaAfectadaPG();
-      await this.agregarPersonaPT2Page.SiDiagnosticoPG();
-      await this.agregarPersonaPT2Page.SiTratamientosPG();
-      await this.agregarPersonaPT2Page.SiFechaDiagnosticoPG();
-      await this.agregarPersonaPT2Page.BtnAgregarPG();
-
-      await this.cuestionarioMedicoPt2Page.CheckSiPH();
-      await this.cuestionarioMedicoPt2Page.CheckSiPHAgregarPersona();
-      await this.agregarPersonaPT2Page.SiEligePersonaAfectadaPH();
-      await this.agregarPersonaPT2Page.SiFechaDiagnosticoPH();
-      await this.agregarPersonaPT2Page.SiDiagnosticoPH();
-      await this.agregarPersonaPT2Page.SiSintomasPH();
-      await this.agregarPersonaPT2Page.SiTratamientosPH();
-      await this.agregarPersonaPT2Page.SiCondicionPH();
-      await this.agregarPersonaPT2Page.BtnAgregarPH();
-
-      await this.cuestionarioMedicoPt2Page.CheckSiPI();
-      await this.cuestionarioMedicoPt2Page.CheckSiPIAgregarPersona();
-      await this.agregarPersonaPT2Page.SiEligePersonaAfectadaPI();
-      await this.agregarPersonaPT2Page.SiFechaDiagnosticoPI();
-      await this.agregarPersonaPT2Page.SiDiagnosticoPI();
-      await this.agregarPersonaPT2Page.SiCondicionPI();
-      await this.agregarPersonaPT2Page.BtnAgregarPI();
-
-      await this.cuestionarioMedicoPt2Page.CheckSiPJ();
-      await this.cuestionarioMedicoPt2Page.CheckSiPJAgregarPersona();
-      await this.agregarPersonaPT2Page.SiEligePersonaAfectadaPJ();
-      await this.agregarPersonaPT2Page.SiFechaDiagnosticoPJ();
-      await this.agregarPersonaPT2Page.SiDiagnosticoPJ();
-      await this.agregarPersonaPT2Page.SiAreaAfectadaCuerpoPJ();
-      await this.agregarPersonaPT2Page.SiSintomasPJ();
-      await this.agregarPersonaPT2Page.SiCheckSecuelaPJ();
-      await this.agregarPersonaPT2Page.SiCondicionPJ();
-      await this.agregarPersonaPT2Page.BtnAgregarPJ();
-
-      await this.cuestionarioMedicoPt2Page.CheckSiPK();
-      await this.cuestionarioMedicoPt2Page.CheckSiPKAgregarPersona();
-      await this.agregarPersonaPT2Page.SiEligePersonaAfectadaPK();
-      await this.agregarPersonaPT2Page.SiFechaDiagnosticoPK();
-      await this.agregarPersonaPT2Page.SiDiagnosticoPK();
-      await this.agregarPersonaPT2Page.SiTratamientosPK();
-      await this.agregarPersonaPT2Page.SiCondicionPK();
-      await this.agregarPersonaPT2Page.SiEstudiosPK();
-      await this.agregarPersonaPT2Page.SiFechaEstudiosPK();
-      await this.agregarPersonaPT2Page.SiSintomasPK();
-      await this.agregarPersonaPT2Page.BtnAgregarPK();
-
-      await this.cuestionarioMedicoPt2Page.CheckSiPL();
-      await this.cuestionarioMedicoPt2Page.CheckSiPLAgregarPersona();
-      await this.agregarPersonaPT2Page.SiEligePersonaAfectadaPL();
-      await this.agregarPersonaPT2Page.SiFechaDiagnosticoPL();
-      await this.agregarPersonaPT2Page.SiDiagnosticoPL();
-      await this.agregarPersonaPT2Page.SiSintomasPL();
-      await this.agregarPersonaPT2Page.SiTratamientosPL();
-      await this.agregarPersonaPT2Page.SiCondicionPL();
-      await this.agregarPersonaPT2Page.SiEstudiosPL();
-      await this.agregarPersonaPT2Page.SiFechaEstudiosPL();
-      await this.agregarPersonaPT2Page.BtnAgregarPL();
-
-      await this.cuestionarioMedicoPt2Page.CheckSiPM();
-      await this.cuestionarioMedicoPt2Page.CheckSiPMAgregarPersona();
-      await this.agregarPersonaPT2Page.SiEligePersonaAfectadaPM();
-      await this.agregarPersonaPT2Page.SiFechaDiagnosticoPM();
-      await this.agregarPersonaPT2Page.SiDiagnosticoPM();
-      await this.agregarPersonaPT2Page.SiTratamientosPM();
-      await this.agregarPersonaPT2Page.SiCondicionPM();
-      await this.agregarPersonaPT2Page.BtnAgregarPM();
-
-      await this.cuestionarioMedicoPt2Page.CheckSiPN();
-      await this.cuestionarioMedicoPt2Page.CheckSiPNAgregarPersona();
-      await this.agregarPersonaPT2Page.SiEligePersonaAfectadaPN();
-      await this.agregarPersonaPT2Page.SiFechaDiagnosticoPN();
-      await this.agregarPersonaPT2Page.SiDiagnosticoPN();
-      await this.agregarPersonaPT2Page.SiSintomasPN();
-      await this.agregarPersonaPT2Page.SiTratamientosPN();
-      await this.agregarPersonaPT2Page.SiCondicionPN();
-      await this.agregarPersonaPT2Page.SiEstudiosPN();
-      await this.agregarPersonaPT2Page.SiFechaEstudiosPN();
-      await this.agregarPersonaPT2Page.BtnAgregarPN();
-
-      await this.cuestionarioMedicoPt2Page.CheckSiPO();
-      await this.cuestionarioMedicoPt2Page.CheckSiPOAgregarPersona();
-      await this.agregarPersonaPT2Page.SiEligePersonaAfectadaPO();
-      await this.agregarPersonaPT2Page.SiDiagnosticoPO();
-      await this.agregarPersonaPT2Page.SiCondicionPO();
-      await this.agregarPersonaPT2Page.BtnAgregarPO();
-
-      await this.cuestionarioMedicoPt2Page.CheckSiPP();
-      await this.cuestionarioMedicoPt2Page.CheckSiPPAgregarPersona();
-      await this.agregarPersonaPT2Page.SiEligePersonaAfectadaPP();
-      await this.agregarPersonaPT2Page.SiFechaCondActPP();
-      await this.agregarPersonaPT2Page.SiDiagnosticoPP();
-      await this.agregarPersonaPT2Page.SiSintomasPP();
-      await this.agregarPersonaPT2Page.SiTratamientosPP();
-      await this.agregarPersonaPT2Page.BtnAgregarPP();
-
-      await this.cuestionarioMedicoPt2Page.CheckSiPQ();
-      await this.cuestionarioMedicoPt2Page.CheckSiPQAgregarPersona();
-      await this.agregarPersonaPT2Page.SiEligePersonaAfectadaPQ();
-      await this.agregarPersonaPT2Page.SiTratamientosPQ();
-      await this.agregarPersonaPT2Page.SiCausaTratamientoPQ();
-      await this.agregarPersonaPT2Page.SiMedicamentoDosisPQ();
-      await this.agregarPersonaPT2Page.BtnAgregarPQ();
-
-      await this.cuestionarioMedicoPt2Page.CheckSiPR();
-      await this.cuestionarioMedicoPt2Page.CheckSiPRAgregarPersona();
-      await this.agregarPersonaPT2Page.SiEligePersonaAfectadaPR();
-      await this.agregarPersonaPT2Page.SiSubiPesoPR();
-      await this.agregarPersonaPT2Page.SiPesoPR();
-      await this.agregarPersonaPT2Page.SiCausaPR();
-      await this.agregarPersonaPT2Page.SiRecibiTratamientoPR();
-      await this.agregarPersonaPT2Page.SiTratamientoRecibidoPR();
-      await this.agregarPersonaPT2Page.BtnAgregarPR();
-    }
+  private async avanzarDespuesDelCuestionario() {
     await this.cuestionarioMedicoPt2Page.ClickBtnSiguiente();
     const destino =
       await this.cuestionarioMedicoPt2Page.esperarDestinoDespuesDelCuestionario();
@@ -928,6 +786,36 @@ export class PasoSieteCuestionarioMedicoFlow {
     } else {
       registrarInfo("Esta ejecución NO incluye la sección 2 del cuestionario");
     }
+  }
+
+  async CapturarCuestionarioMedicoP2(
+    IdiomaCotizacion: string,
+    CapturaCuestionarioMedico: string,
+  ) {
+    const respuestaCuestionario = normalizarRespuestaBinaria(
+      CapturaCuestionarioMedico,
+      "CapturaPreguntasPt2",
+    );
+    registrarInfo(`Cuestionario médico II configurado en: ${respuestaCuestionario}`);
+
+    if (respuestaCuestionario === "Si") {
+      registrarInfo(
+        "El modo afirmativo binario usa la pregunta A como caso UW dirigido; no selecciona diagnósticos críticos al azar",
+      );
+      await this.cuestionarioMedicoPt2Page.CheckSiPA();
+      await this.cuestionarioMedicoPt2Page.CheckSiPAAgregarPersona();
+      await this.agregarPersonaPT2Page.SiEligePersonaAfectadaPA();
+      await this.agregarPersonaPT2Page.SiFechaDiagnosticoPA();
+      await this.agregarPersonaPT2Page.SiTipoTumorCancerPA();
+      await this.agregarPersonaPT2Page.NoCheckQuimioRadioPA();
+      await this.agregarPersonaPT2Page.BtnAgregarPA();
+      await this.cuestionarioMedicoPt2Page.SeleccionarTodasLasRespuestasNo([1]);
+      await this.avanzarDespuesDelCuestionario();
+      return;
+    }
+
+    await this.cuestionarioMedicoPt2Page.SeleccionarTodasLasRespuestasNo();
+    await this.avanzarDespuesDelCuestionario();
   }
 }
 
@@ -989,6 +877,10 @@ export class PasoOnceAplicacionCompletaFlow {
 
   async ValidarAplicacionEnEvaluacion(idioma: Idioma) {
     return this.aplicacionCompletaPage.validarCotizacionEnEvaluacion(idioma);
+  }
+
+  async ValidarDisponibleParaPagoSinBMI(idioma: Idioma) {
+    await this.aplicacionCompletaPage.validarDisponibleParaPagoSinBMI(idioma);
   }
 }
 

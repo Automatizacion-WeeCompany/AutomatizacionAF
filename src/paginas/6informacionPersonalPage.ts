@@ -65,19 +65,15 @@ export class InformacionPersonalPage {
     async CheckCasado() {
         await this.page.frameLocator('iframe#ifCotizador').locator('label.checkbox-design[for="optCasado"]').click();
     }
-    async IngresaEstatura(estaturaCm?: number) {
-        const alturaTitular = estaturaCm ?? await this.generarValorAleatorio(150, 170);
+    async IngresaEstatura(estaturaCm = 170) {
+        const alturaTitular = estaturaCm;
         await this.ingresarDatoAntropometrico('#Altura', alturaTitular);
         return alturaTitular;
     }
-    async IngresaPeso(pesoKg?: number) {
-        const pesoTitular = pesoKg ?? await this.generarValorAleatorio(50, 85);
+    async IngresaPeso(pesoKg = 65) {
+        const pesoTitular = pesoKg;
         await this.ingresarDatoAntropometrico('#peso', pesoTitular);
         return pesoTitular;
-    }
-    private async generarValorAleatorio(min: number, max: number) {
-        const { faker } = await import("@faker-js/faker");
-        return faker.number.int({ min, max });
     }
     private async ingresarDatoAntropometrico(selector: string, valor: number) {
         if (!Number.isInteger(valor) || valor <= 0) {
@@ -296,9 +292,9 @@ export class InformacionPersonalPage {
     async ClickBtnAgregarConyuge() {
         const botonAgregarConyuge = this.page
             .frameLocator('iframe#ifCotizador')
-            .getByText(
-                /Add Spouse \/ Domestic Partner|Agregar Cónyuge \/ Pareja Doméstica|Adicionar Cônjuge \/ Parceiro Doméstico/i,
-            )
+            .getByRole('button', {
+                name: /Add Spouse\s*\/\s*Domestic Partner|Agregar Cónyuge\s*\/\s*Pareja Doméstica|Adicionar Cônjuge\s*\/\s*Parceiro(?:\(a\))?/i,
+            })
             .first();
         await expect(botonAgregarConyuge).toBeVisible({ timeout: 15000 });
         await botonAgregarConyuge.click();
@@ -336,18 +332,14 @@ export class InformacionPersonalPage {
         const NombreDependiente = faker.person.firstName();
         await this.page.frameLocator('iframe#ifCotizador').locator('#txtNombreDependiente').pressSequentially(NombreDependiente);
     }
-    async IngresaFechaNacimientoDependiente(edadDependiente?: number) {
-        const { faker } = await import("@faker-js/faker");
+    async IngresaFechaNacimientoDependiente(edadDependiente = 10) {
+        if (!Number.isInteger(edadDependiente) || edadDependiente < 0 || edadDependiente > 23) {
+            throw new Error(`Edad de hijo/dependiente inválida: ${edadDependiente}`);
+        }
         const fechaActual = new Date();
-        const Dia = edadDependiente
-            ? String(Math.min(fechaActual.getDate(), 28)).padStart(2, '0')
-            : faker.number.int({ min: 1, max: 28 }).toString().padStart(2, '0');
-        const Mes = edadDependiente
-            ? String(fechaActual.getMonth() + 1).padStart(2, '0')
-            : faker.number.int({ min: 1, max: 12 }).toString().padStart(2, '0');
-        const Anio = edadDependiente
-            ? String(fechaActual.getFullYear() - edadDependiente)
-            : faker.number.int({ min: 2008, max: 2025 }).toString();
+        const Dia = String(Math.min(fechaActual.getDate(), 28)).padStart(2, '0');
+        const Mes = String(fechaActual.getMonth() + 1).padStart(2, '0');
+        const Anio = String(fechaActual.getFullYear() - edadDependiente);
         const FechaNacimientoDependiente = `${Mes}/${Dia}/${Anio}`;
         const input = this.page.frameLocator('iframe#ifCotizador').locator('#datepickerBirthday');
         await input.fill(FechaNacimientoDependiente);
@@ -386,13 +378,13 @@ export class InformacionPersonalPage {
         await this.page.frameLocator('iframe#ifCotizador').locator('#PaisNacimientoSelectDependiente').click();
         await seleccionarOpcionAleatoriaDesdeLocator(this.page.frameLocator('iframe#ifCotizador').locator('#PaisNacimientoSelectDependiente'));
     }
-    async IngresaEstaturaDependiente(estaturaCm?: number) {
-        const alturaDependiente = estaturaCm ?? await this.generarValorAleatorio(150, 170);
+    async IngresaEstaturaDependiente(estaturaCm = 135) {
+        const alturaDependiente = estaturaCm;
         await this.ingresarDatoAntropometrico('#AlturaDependiente', alturaDependiente);
         return alturaDependiente;
     }
-    async IngresaPesoDependiente(pesoKg?: number) {
-        const pesoDependiente = pesoKg ?? await this.generarValorAleatorio(50, 85);
+    async IngresaPesoDependiente(pesoKg = 32) {
+        const pesoDependiente = pesoKg;
         await this.ingresarDatoAntropometrico('#pesoDependiente', pesoDependiente);
         return pesoDependiente;
     }

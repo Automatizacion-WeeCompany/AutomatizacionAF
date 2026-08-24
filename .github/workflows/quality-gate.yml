@@ -1,0 +1,96 @@
+name: Quality gate AF
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths-ignore:
+      - "docs/**"
+      - "**/*.md"
+      - "**/.DS_Store"
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - "docs/**"
+      - "**/*.md"
+      - "**/.DS_Store"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  reglas:
+    name: Compilación y reglas críticas
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v6
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Compilar TypeScript
+        run: npm run build
+
+      - name: Ejecutar reglas de negocio
+        run: npm run test:ci:reglas
+
+  smoke:
+    name: Smoke crítico en Chromium
+    needs: reglas
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    env:
+      CI: "true"
+      CI_BROWSER: Chromium
+      AMBIENTE: qa
+      BASE_URL_QA: ${{ vars.BASE_URL_QA }}
+      BASE_URL_STAGING: ${{ vars.BASE_URL_STAGING }}
+      TEST_USERNAME: ${{ secrets.TEST_USERNAME }}
+      TEST_PASSWORD: ${{ secrets.TEST_PASSWORD }}
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v6
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Instalar únicamente Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Ejecutar smoke de aplicación
+        run: npm run test:ci
+
+      - name: Guardar diagnóstico del smoke
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v5
+        with:
+          name: diagnostico-smoke-${{ github.run_number }}-${{ github.run_attempt }}
+          path: |
+            test-results/
+            Evidencias/reportes-ci/smoke/
+          retention-days: 7
+          if-no-files-found: ignore
