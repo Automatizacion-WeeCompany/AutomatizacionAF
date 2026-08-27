@@ -37,12 +37,12 @@ npx playwright test --list
 | `npm test` | Ejecuta toda la suite. | Chromium y Firefox; navegador visible por configuración. |
 | `npm run test:ci` | Ejecuta el smoke de CI/CD. | Dos recorridos críticos `@smoke`, Chromium por defecto, headless y un worker. |
 | `npm run test:ci:list` | Lista el smoke sin abrir navegador. | Debe descubrir exactamente dos pruebas. |
-| `npm run test:ci:reglas` | Ejecuta reglas y contratos de cobertura para CI. | 87 pruebas sin navegador, video, trace ni screenshot. |
+| `npm run test:ci:reglas` | Ejecuta reglas y contratos de cobertura para CI. | 99 pruebas sin navegador, video, trace ni screenshot. |
 | `npm run test:ci:nightly` | Ejecuta el turno nocturno. | Dos casos; requiere `CI_NIGHTLY_SLOT=1..4`. |
 | `npm run test:ci:critical` | Ejecuta toda la selección crítica de Aplicación. | Ocho casos que cubren perfiles y ejes comerciales. |
 | `npm run test:ci:integration` | Ejecuta la integración crítica AF a Claims. | Un caso familiar de emisión, comparación y aceptación. |
 | `npm run test:ci:tarifas` | Ejecuta la muestra semanal de tarifas. | Una variante individual y cinco países equidistantes. |
-| `npm run test:reglas` | Ejecuta las 87 pruebas de reglas y contratos CI. | Chromium, sin navegación ni creación de solicitudes. |
+| `npm run test:reglas` | Ejecuta las 99 pruebas de reglas y contratos CI. | Chromium, sin navegación ni creación de solicitudes. |
 | `npm run test:aplicacion` | Ejecuta los 768 recorridos de Aplicación AF. | Chromium; 256 casos por cada idioma. |
 | `npm run test:aplicacion:emision` | Ejecuta únicamente emisión directa. | 384 escenarios en Chromium. |
 | `npm run test:aplicacion:uw-bmi` | Ejecuta únicamente revisión UW por BMI. | 384 escenarios en Chromium. |
@@ -172,7 +172,7 @@ Las URLs de navegación provienen principalmente del Excel; además existen URLs
 - Resultados de textos faltantes: `src/textosEsperados/textosFaltantes/`.
 - Reportes de póliza por worker y consolidado: `src/Evidencias/` cuando se generan.
 - Emisión y autorizaciones en Claims: `Evidencias/emision-claims/<poliza>/`.
-- Validación de tarifas: `Evidencias/validacion-tarifas/<ejecucion>/`.
+- Validación de tarifas: `Evidencias/validacion-tarifas/<ejecucion>/`; cada cotización genera ahí su JSON incremental y la matriz independiente agrega sus consolidados `.ndjson`, `.json` y `.csv`.
 
 Consulta [Evidencias y reportes](EVIDENCIAS-Y-REPORTES.md).
 

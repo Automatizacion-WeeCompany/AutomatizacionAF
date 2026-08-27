@@ -15,12 +15,23 @@ import {
 } from './cotizadorAF.flow';
 import { CotizacionAFBaseFlow } from './cotizacionAFBase.flow';
 import { obtenerVarianteValidacionTarifa } from '../utilidades/GenerarMatrizValidacionTarifas';
+import {
+  TarifaNoCoincideError,
+  TarifaReferenciaNoDisponibleError,
+} from '../utilidades/ValidarTarifaAF';
+import { obtenerRutaReporteTarifa } from '../utilidades/EvidenciaValidacionTarifa';
 
 function detalleError(error: unknown) {
   return error instanceof Error ? error.message : String(error);
 }
 
 function clasificarError(error: unknown): EstadoValidacionTarifa {
+  if (error instanceof TarifaNoCoincideError) {
+    return 'Diferencia';
+  }
+  if (error instanceof TarifaReferenciaNoDisponibleError) {
+    return 'SinReferencia';
+  }
   if (error instanceof TarifaNoDisponibleError) {
     return 'SinTarifa';
   }
@@ -89,7 +100,6 @@ export class ValidacionTarifasAFFlow {
         numeroFlujo,
         {
           paisResidencia: pais,
-          validarTarifaAplicable: true,
           asegurarSinBMI: true,
           registrarLogPoliza: false,
         },
@@ -114,6 +124,9 @@ export class ValidacionTarifasAFFlow {
         duracionMs: Date.now() - inicio,
         estado: 'Exitosa',
         tarifaAplicable: resultado.tarifaAplicable,
+        validacionTarifa: resultado.validacionTarifa,
+        validacionesTarifa: resultado.validacionesTarifa,
+        reporteTarifaJson: resultado.reporteTarifaJson,
         folioPoliza: resultado.numeroPoliza,
       };
     } catch (error) {
@@ -121,6 +134,15 @@ export class ValidacionTarifasAFFlow {
         ...datosBase,
         duracionMs: Date.now() - inicio,
         estado: clasificarError(error),
+        tarifaAplicable:
+          error instanceof TarifaNoCoincideError
+            ? error.comparacion.textoVisible
+            : undefined,
+        validacionTarifa:
+          error instanceof TarifaNoCoincideError
+            ? error.comparacion
+            : undefined,
+        reporteTarifaJson: obtenerRutaReporteTarifa(error),
         detalle: detalleError(error),
       };
     }

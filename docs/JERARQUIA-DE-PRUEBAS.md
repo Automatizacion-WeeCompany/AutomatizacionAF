@@ -78,8 +78,8 @@ mantener:
 - 768 recorridos de Aplicación AF por navegador: 256 por cada idioma;
 - 384 integraciones de emisión con WeeClaims por navegador;
 - 384 variantes de tarifas por navegador, cada una recorriendo sus países;
-- 83 reglas de decisión y cuatro contratos del catálogo CI por navegador;
-- 1623 pruebas por navegador y 3246 con Chromium y Firefox;
+- 99 reglas, contratos y comprobaciones de infraestructura por navegador;
+- 1635 pruebas por navegador y 3270 con Chromium y Firefox;
 - dos recorridos `@smoke`;
 - ocho recorridos críticos distribuidos en cuatro slots nocturnos;
 - una integración Claims y una variante de tarifas seleccionadas para CI;

@@ -1,8 +1,32 @@
 import { expect, Page } from "@playwright/test";
 import { esperarOpcionesEnSelect } from "src/utilidades/SelectAleatoreo";
+import { DatosTarifaVisible } from "../types/ValidacionTarifas";
+import {
+    obtenerTarifaVisible,
+    TarifaNoDisponibleError,
+} from "../utilidades/ExtraerTarifaVisible";
 
 export class ConfirmacionDePlanYPagoPage {
     constructor(private readonly page: Page) { }
+
+    async obtenerTarifaAplicable(): Promise<DatosTarifaVisible> {
+        const selector = '#MoneyLabel:visible';
+        const tarifa = await obtenerTarifaVisible(
+            [
+                {
+                    locator: this.page.frameLocator('iframe#ifCotizador').locator(selector),
+                    selector,
+                },
+            ],
+            { mensaje: 'La confirmación del plan no mostró el costo' },
+        );
+        if (!tarifa) {
+            throw new TarifaNoDisponibleError(
+                'La confirmación del plan no generó una tarifa monetaria positiva',
+            );
+        }
+        return tarifa;
+    }
 
     async ClickBtnSiguienteConfirmacionDePlanYPago() {
         const iframe = this.page.frameLocator('iframe#ifCotizador');

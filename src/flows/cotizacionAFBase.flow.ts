@@ -1,7 +1,11 @@
 import { Page } from "@playwright/test";
 import { guardarLogPoliza } from "../utilidades/LogPolizas";
 import { EscenarioExcel } from "../types/EscenarioExcel";
-import { OpcionPaisResidencia } from "../types/ValidacionTarifas";
+import {
+  ComparacionTarifa,
+  OpcionPaisResidencia,
+  ValidacionTarifaPantalla,
+} from "../types/ValidacionTarifas";
 import {
   ContextoDatosCotizacion,
   DatosCotizacionGuardados,
@@ -24,20 +28,31 @@ import {
   PasoDosPlanesFlow,
   PasoUnoDatosPersonalesFlow,
 } from "./cotizadorAF.flow";
+import {
+  adjuntarRutaReporteTarifa,
+  EvidenciaValidacionTarifa,
+} from "../utilidades/EvidenciaValidacionTarifa";
 
 export type ResultadoEjecucionCotizacion =
-  | { resultado: "EvaluacionBMI" }
+  | {
+      resultado: "EvaluacionBMI";
+      validacionTarifa: ComparacionTarifa;
+      validacionesTarifa: ValidacionTarifaPantalla[];
+      reporteTarifaJson: string;
+    }
   | {
       resultado: "Emision";
       nombreTitular: string;
       numeroPoliza: string;
-      tarifaAplicable?: string;
+      tarifaAplicable: string;
+      validacionTarifa: ComparacionTarifa;
+      validacionesTarifa: ValidacionTarifaPantalla[];
+      reporteTarifaJson: string;
       datosCotizacion: DatosCotizacionGuardados;
     };
 
 export interface OpcionesEjecucionCotizacion {
   paisResidencia?: OpcionPaisResidencia;
-  validarTarifaAplicable?: boolean;
   asegurarSinBMI?: boolean;
   registrarLogPoliza?: boolean;
 }
@@ -102,96 +117,132 @@ export class CotizacionAFBaseFlow {
     );
     this.contextoDatosCotizacion.activar();
 
-    const { edadTitular, edadConyuge } =
+    const { edadTitular, edadConyuge, paisSeleccionado } =
       await this.pasoUnoDatosPersonales.CapturaDatosPersonales(
         escenario.TipoPoliza,
         escenario.ConyugePareja,
         String(escenario.HijosMenoresDe24 ?? ""),
         opciones.paisResidencia,
       );
-
-    await this.pasoDosPlanes.seleccionarPlanes(
-      escenario.IdiomaCotizacion,
-      escenario.CotizarPlan,
-      escenario.RedProveedores,
-      escenario.Deducible,
-      escenario.FrecuenciaPago,
-    );
-    const tarifaAplicable = await this.pasoTresCotizacion.resumenCotizacion(
-      escenario.IdiomaCotizacion,
-      opciones.validarTarifaAplicable,
-    );
-    await this.pasoCuatroResumenCotizacion.resumenPlanesCot(
-      escenario.IdiomaCotizacion,
-    );
-    await this.pasoCincoInformacionPersonal.informacionPersonal(
-      escenario,
-      edadTitular,
+    const evidenciaTarifa = await EvidenciaValidacionTarifa.crear(
+      {
+        escenario,
+        pais: paisSeleccionado,
+        edadTitular,
+        edadConyuge,
+      },
       numeroFlujo,
-      edadConyuge,
     );
-    await this.pasoSeisCuestionarioMedico.CapturarCuestionarioMedicoP1(
-      escenario.IdiomaCotizacion,
-      escenario.CuestionarioMedicoCaptura,
-      escenario.P5Sustancia,
-      escenario.SigueIngiriendo,
-    );
-    await this.pasoSieteCuestionarioMedico.CapturarCuestionarioMedicoP2(
-      escenario.IdiomaCotizacion,
-      escenario.CapturaPreguntasPt2,
-    );
-    await this.pasoOchoConfirmacionDePlanYPago.CapturarConfirmacionDePlanYPago();
-    await this.pasoNueveTerminosyCondiciones.CapturarTerminosyCondiciones();
-    await this.pasoDiezDeclaracion.CapturarDeclaracion();
+    const validarTarifaEnPantalla = evidenciaTarifa.validar.bind(evidenciaTarifa);
 
-    if (escenario.ResultadoEsperado === "EvaluacionBMI") {
-      if (escenario.ObjetivoBMI !== "Titular") {
+    try {
+      await this.pasoDosPlanes.seleccionarPlanes(
+        escenario.IdiomaCotizacion,
+        escenario.CotizarPlan,
+        escenario.RedProveedores,
+        escenario.Deducible,
+        escenario.FrecuenciaPago,
+      );
+      const { tarifaAplicable, validacionTarifa } =
+        await this.pasoTresCotizacion.resumenCotizacion({
+          idiomaCotizacion: escenario.IdiomaCotizacion,
+          validarTarifaEnPantalla,
+        });
+      await this.pasoCuatroResumenCotizacion.resumenPlanesCot(
+        escenario.IdiomaCotizacion,
+        validarTarifaEnPantalla,
+      );
+      await this.pasoCincoInformacionPersonal.informacionPersonal(
+        escenario,
+        edadTitular,
+        numeroFlujo,
+        edadConyuge,
+      );
+      await this.pasoSeisCuestionarioMedico.CapturarCuestionarioMedicoP1(
+        escenario.IdiomaCotizacion,
+        escenario.CuestionarioMedicoCaptura,
+        escenario.P5Sustancia,
+        escenario.SigueIngiriendo,
+      );
+      await this.pasoSieteCuestionarioMedico.CapturarCuestionarioMedicoP2(
+        escenario.IdiomaCotizacion,
+        escenario.CapturaPreguntasPt2,
+      );
+      await this.pasoOchoConfirmacionDePlanYPago.CapturarConfirmacionDePlanYPago(
+        validarTarifaEnPantalla,
+      );
+      await this.pasoNueveTerminosyCondiciones.CapturarTerminosyCondiciones();
+      await this.pasoDiezDeclaracion.CapturarDeclaracion();
+
+      if (escenario.ResultadoEsperado === "EvaluacionBMI") {
+        if (escenario.ObjetivoBMI !== "Titular") {
+          throw new Error(
+            `La evaluación BMI de ${escenario.ObjetivoBMI} pertenece al flujo adicional de dependientes`,
+          );
+        }
+        await this.pasoOnceAplicacionCompleta.ValidarAplicacionEnEvaluacion(
+          escenario.IdiomaCotizacion,
+          validarTarifaEnPantalla,
+        );
+        await evidenciaTarifa.finalizarExito("EvaluacionBMI");
+        return {
+          resultado: "EvaluacionBMI",
+          validacionTarifa,
+          validacionesTarifa: evidenciaTarifa.obtenerValidaciones(),
+          reporteTarifaJson: evidenciaTarifa.rutaReporteJson,
+        };
+      }
+
+      if (escenario.ResultadoEsperado !== "Emision") {
         throw new Error(
-          `La evaluación BMI de ${escenario.ObjetivoBMI} pertenece al flujo adicional de dependientes`,
+          `Resultado esperado no soportado: ${escenario.ResultadoEsperado}`,
         );
       }
-      await this.pasoOnceAplicacionCompleta.ValidarAplicacionEnEvaluacion(
+
+      if (opciones.asegurarSinBMI) {
+        await this.pasoOnceAplicacionCompleta.ValidarDisponibleParaPagoSinBMI(
+          escenario.IdiomaCotizacion,
+        );
+      }
+
+      await this.pasoOnceAplicacionCompleta.CapturarAplicacionCompleta(
+        validarTarifaEnPantalla,
+      );
+      await this.pasoDoceRegistrarInformacionPago.CapturarInformacionPago();
+      const confirmacion = await this.pasoTreceMetodoPago.CapturarMetodoPago(
         escenario.IdiomaCotizacion,
+        validarTarifaEnPantalla,
       );
-      return { resultado: "EvaluacionBMI" };
-    }
-
-    if (escenario.ResultadoEsperado !== "Emision") {
-      throw new Error(
-        `Resultado esperado no soportado: ${escenario.ResultadoEsperado}`,
+      const datosCotizacion = await this.contextoDatosCotizacion.guardar(
+        escenario,
+        confirmacion,
       );
-    }
+      if (opciones.registrarLogPoliza !== false) {
+        await guardarLogPoliza({
+          numeroFlujo,
+          escenario: `${escenario.EscenarioPrueba} ${escenario.IdiomaCotizacion}`,
+          nombre: confirmacion.nombreTitular,
+          poliza: confirmacion.numeroPoliza,
+        });
+      }
 
-    if (opciones.asegurarSinBMI) {
-      await this.pasoOnceAplicacionCompleta.ValidarDisponibleParaPagoSinBMI(
-        escenario.IdiomaCotizacion,
+      await evidenciaTarifa.finalizarExito(
+        "Emision",
+        confirmacion.numeroPoliza,
       );
+      return {
+        resultado: "Emision",
+        nombreTitular: confirmacion.nombreTitular,
+        numeroPoliza: confirmacion.numeroPoliza,
+        tarifaAplicable,
+        validacionTarifa,
+        validacionesTarifa: evidenciaTarifa.obtenerValidaciones(),
+        reporteTarifaJson: evidenciaTarifa.rutaReporteJson,
+        datosCotizacion,
+      };
+    } catch (error) {
+      await evidenciaTarifa.finalizarError(error);
+      throw adjuntarRutaReporteTarifa(error, evidenciaTarifa.rutaReporteJson);
     }
-
-    await this.pasoOnceAplicacionCompleta.CapturarAplicacionCompleta();
-    await this.pasoDoceRegistrarInformacionPago.CapturarInformacionPago();
-    const confirmacion = await this.pasoTreceMetodoPago.CapturarMetodoPago(
-      escenario.IdiomaCotizacion,
-    );
-    const datosCotizacion = await this.contextoDatosCotizacion.guardar(
-      escenario,
-      confirmacion,
-    );
-    if (opciones.registrarLogPoliza !== false) {
-      await guardarLogPoliza({
-        numeroFlujo,
-        escenario: `${escenario.EscenarioPrueba} ${escenario.IdiomaCotizacion}`,
-        nombre: confirmacion.nombreTitular,
-        poliza: confirmacion.numeroPoliza,
-      });
-    }
-
-    return {
-      resultado: "Emision",
-      nombreTitular: confirmacion.nombreTitular,
-      numeroPoliza: confirmacion.numeroPoliza,
-      tarifaAplicable,
-      datosCotizacion,
-    };
   }
 }

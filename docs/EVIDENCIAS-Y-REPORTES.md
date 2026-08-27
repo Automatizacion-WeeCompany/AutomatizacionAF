@@ -61,17 +61,34 @@ Los nombres internos de controles —por ejemplo `generoRadio` o `SeguroMedicoEx
 
 ### `Evidencias/validacion-tarifas/`
 
-Cada proyecto y worker escribe una carpeta inmutable por ejecución con tres
-formatos:
+Toda cotización crea primero un reporte incremental propio:
+
+```text
+Evidencias/validacion-tarifas/<fecha>-<pid>-flujo-<numero>-<id>/validacion-tarifa-flujo-<numero>.json
+```
+
+El archivo se escribe al iniciar y se actualiza después de cada pantalla. Incluye
+Cotización, Resumen de planes cotizados, Confirmación de plan y pago, Aplicación
+completa y Método de pago; si el recorrido falla, conserva las comparaciones
+previas y el detalle del error. Cada registro guarda selector, texto visible,
+componentes del cálculo, esperado, obtenido y diferencia. No incluye
+credenciales ni datos de tarjeta.
+
+Cuando se ejecuta la matriz comercial independiente, cada proyecto y worker
+escribe además otra carpeta inmutable con tres formatos:
 
 - `.ndjson`: log incremental, una línea por país y variante, para conservar el avance ante una interrupción;
 - `.json`: reporte final con resumen global, resumen por país, resumen por variante y todos los resultados;
-- `.csv`: vista tabular para filtrar país, tipo de póliza, composición familiar, plan, red, deducible, frecuencia, tarifa, folio y estado.
+- `.csv`: vista tabular con versión, país, composición, plan, red, deducible, frecuencia, componentes familiares, base, recargo, esperado, obtenido, diferencia, zonas, ruta del JSON del recorrido, folio y estado.
 
-Los estados son `Exitosa`, `SinTarifa`, `EvaluacionBMI` y `Error`. El indicador
+Los estados son `Exitosa`, `Diferencia`, `SinReferencia`, `SinTarifa`,
+`EvaluacionBMI` y `Error`. El indicador
 `coberturaCompleta` sólo es verdadero cuando cada combinación esperada se ejecutó
-una vez, produjo tarifa y folio, y no hubo BMI, errores ni duplicados. El reporte
-no guarda credenciales ni el nombre generado del titular.
+una vez, la tarifa coincidió y no hubo referencias faltantes, BMI, errores ni
+duplicados. El reporte
+no guarda credenciales ni el nombre generado del titular. Las coincidencias por
+pantalla también aparecen en el reporte HTML como anotaciones
+`tarifa-validada`.
 
 ### `src/textosEsperados/textosFaltantes/`
 

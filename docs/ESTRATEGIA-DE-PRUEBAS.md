@@ -10,20 +10,20 @@ La suite debe demostrar que los recorridos críticos de AF y Claims avanzan por 
 |---|---|---|
 | Cotizador AF | 768 escenarios familiares e individuales, con emisión o evaluación BMI en tres idiomas. | `ConfiguracionesPlan × PerfilesCotizacion × Esp/Eng/Port`. |
 | Emisión Claims AF | Cotización integrada, captura de datos, atención de la solicitud y comparación de las siete pestañas de la póliza generada. | Matriz del cotizador + hoja `EmisionAF`. |
-| Validación de tarifas AF | Todos los países disponibles cruzados con los 384 escenarios de emisión en tres idiomas; valida tarifa, exclusión de BMI y folio. | Catálogo dinámico de la UI × matriz de emisión × idioma. |
-| Árbol de suscripción y contrato CI | 83 casos de negocio más cuatro invariantes del catálogo crítico. | Specs focalizados en `src/tests/reglas/`. |
+| Validación de tarifas AF | Comparación obligatoria en todos los flujos y matriz de países × 384 escenarios; diagnostica componentes, recargo y diferencia. | Catálogo `2026-12` × país de la UI × matriz de emisión × idioma. |
+| Reglas y contratos CI | 99 pruebas de negocio, infraestructura, catálogo, cálculo y evidencia de tarifas. | Specs focalizados en `src/tests/reglas/`. |
 | Idiomas | Selección de Esp/Eng/Port; contratos JSON completos solo en parte. | Excel + JSON. |
 | Navegadores | Chromium y Firefox. | Proyectos Playwright. |
 | Evidencias | Lista, HTML, video, screenshot y trace. | Configuración Playwright. |
 
-El 24 de agosto de 2026, Playwright descubrió 3246 tests: 768 escenarios de
+El 27 de agosto de 2026, Playwright descubrió 3270 tests: 768 escenarios de
 Aplicación, 384 recorridos integrados de Emisión, 384 variantes de Validación
-de tarifas y 87 reglas/contratos, repetidos en dos proyectos. Cada variante de
+de tarifas y 99 reglas/contratos, repetidos en dos proyectos. Cada variante de
 tarifas itera los países disponibles en tiempo de ejecución; usa el reporte
 para conocer el número real de casos.
 
 CI/CD no ejecuta esta matriz completa de forma automática. El quality gate
-combina las 87 reglas rápidas con dos recorridos smoke; el nocturno rota ocho
+combina las 99 reglas rápidas con dos recorridos smoke; el nocturno rota ocho
 recorridos de Aplicación en cuatro slots y agrega una integración Claims; el
 semanal añade Firefox y una muestra de tarifas. La selección se administra en
 `src/configuraciones/escenariosCI.ts` y no modifica la matriz local.
@@ -48,13 +48,13 @@ cartesianos en cada cambio.
 - Errores explícitos para valores de datos no soportados en varias ramas.
 - Resultado explícito de emisión o evaluación BMI y objetivo antropométrico trazable.
 - En la matriz activa, la evaluación BMI se espera únicamente cuando el objetivo es el titular; BMI de dependientes queda reservado para un flujo adicional.
-- Tarifa monetaria positiva por país y variante, rechazo explícito de cualquier salida BMI y folio final de 12 dígitos.
+- Pago por recibo comparado contra la tarifa `2026-12` en las cinco pantallas que lo muestran, con tolerancia de un centavo, 8% sólo en Mensual, anotación exitosa y JSON incremental para diagnosticar cualquier diferencia.
 - Cobertura cartesiana comprobada en el reporte por país y por variante, sin depender de una lista estática de países.
 - Precedencia de decisiones comprobada sin crear solicitudes: bloqueo 77+, rechazo del titular, exclusión de dependientes, UW y enrutamiento a Nuevas/Pendientes/Rechazadas.
 
 ## Brechas actuales
 
-- Los lectores, validadores y mapeos de Excel aún no tienen pruebas unitarias; las reglas de suscripción sí cuentan con una suite focalizada.
+- Los lectores generales de Excel aún no tienen pruebas unitarias; el catálogo, normalización de países, zonas y cálculo de tarifas sí cuentan con pruebas focalizadas.
 - No hay pruebas de API, accesibilidad o visual regression.
 - Los E2E de PR que necesitan secretos se omiten en forks; las reglas y la compilación sí se ejecutan.
 - Los contratos de textos en inglés y portugués están referenciados pero faltan.

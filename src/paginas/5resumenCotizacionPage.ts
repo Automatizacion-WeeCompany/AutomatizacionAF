@@ -1,7 +1,32 @@
 import { expect, Page } from "@playwright/test";
+import { DatosTarifaVisible } from "../types/ValidacionTarifas";
+import {
+    obtenerTarifaVisible,
+    TarifaNoDisponibleError,
+} from "../utilidades/ExtraerTarifaVisible";
 
 export class ResumenPlanesCotizadosPage {
     constructor(private readonly page: Page) { }
+
+    async obtenerTarifaAplicable(): Promise<DatosTarifaVisible> {
+        const selector = '.resumePlan .price .monto:visible';
+        const tarifa = await obtenerTarifaVisible(
+            [
+                {
+                    locator: this.page.frameLocator('iframe#ifCotizador').locator(selector),
+                    selector,
+                },
+            ],
+            { mensaje: 'El resumen de planes no mostró la tarifa seleccionada' },
+        );
+        if (!tarifa) {
+            throw new TarifaNoDisponibleError(
+                'El resumen de planes no generó una tarifa monetaria positiva',
+            );
+        }
+        return tarifa;
+    }
+
     async ClickBtnAplicarAhora() {
         const iframe = this.page.frameLocator('iframe#ifCotizador');
         const botonAplicar = iframe.locator('button.btn-aplicaAhora:visible');

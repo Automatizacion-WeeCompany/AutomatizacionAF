@@ -89,14 +89,16 @@ test.describe("05. Matriz comercial", { tag: "@matriz" }, () => {
       }
 
       const hallazgos =
+        resumen.diferencias +
         resumen.sinTarifa +
+        resumen.sinReferencia +
         resumen.evaluacionesBMI +
         resumen.errores +
         resumen.casosFaltantes +
         resumen.casosDuplicados;
       expect(
         hallazgos,
-        `Validación de tarifas con hallazgos. Sin tarifa: ${resumen.sinTarifa}; BMI: ${resumen.evaluacionesBMI}; errores: ${resumen.errores}. Consulte ${reporte?.rutas.reporteJson}`,
+        `Validación de tarifas con hallazgos. Diferencias: ${resumen.diferencias}; sin referencia: ${resumen.sinReferencia}; sin tarifa: ${resumen.sinTarifa}; BMI: ${resumen.evaluacionesBMI}; errores: ${resumen.errores}. Consulte ${reporte?.rutas.reporteJson}`,
       ).toBe(0);
     });
 
@@ -104,7 +106,7 @@ test.describe("05. Matriz comercial", { tag: "@matriz" }, () => {
       const id = folioCaso("MAT-TAR", indiceEscenario);
 
       test(
-        `${id} | ${escenario.TipoPoliza} con ${escenario.ConfiguracionPlan} → tarifa positiva en cada país`,
+        `${id} | ${escenario.TipoPoliza} con ${escenario.ConfiguracionPlan} → tarifa correcta en cada país`,
         {
           tag: [
             tagsPorTipoPoliza(escenario),
@@ -118,12 +120,12 @@ test.describe("05. Matriz comercial", { tag: "@matriz" }, () => {
             {
               type: "propósito",
               description:
-                "Validar la tarifa de la variante comercial en todos los países disponibles.",
+                "Comparar la tarifa mostrada contra el catálogo de diciembre de 2026 en todos los países disponibles.",
             },
             {
               type: "valida",
               description:
-                "Tarifa positiva, ausencia de evaluación BMI y folio final por país.",
+                "Monto esperado, monto mostrado, diferencia, recargo aplicable y folio final por país.",
             },
             {
               type: "variante",

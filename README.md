@@ -6,7 +6,7 @@ Framework de automatización web end-to-end para los procesos de American Fideli
 
 - Cotizador AF: matriz de 768 cotizaciones familiares e individuales, generada como perfiles × configuraciones comerciales × tres idiomas; valida emisión o evaluación BMI según el objetivo del caso.
 - Emisión Claims AF: genera la póliza con los flujos del cotizador, conserva los datos capturados, abre esa misma póliza en Emisión, atiende la solicitud y compara las siete pestañas de Claims.
-- Validación de tarifas: descubre todos los países de residencia disponibles y cruza cada uno con los 384 escenarios familiares e individuales de emisión en Esp/Eng/Port; exige tarifa positiva, ausencia de BMI y folio final.
+- Validación de tarifas: toda cotización compara obligatoriamente el pago mostrado contra el catálogo versionado `2026-12` en Cotización, Resumen de planes, Confirmación, Aplicación completa y Método de pago; cada coincidencia aparece como anotación y cada recorrido conserva un JSON incremental. La matriz comercial además cruza los países disponibles con los 384 escenarios de emisión.
 - Árbol de suscripción: cubre edad, cálculo BMI/percentil, diagnósticos críticos, UW, PEP, documentos y enrutamiento a Nuevas/Pendientes/Rechazadas con datos deterministas.
 - Validación de textos por idioma a partir de archivos JSON.
 - Evidencias Playwright: reporte HTML, video, captura y trace según la política configurada.
@@ -45,7 +45,7 @@ npm test
 ```
 
 CI/CD dispone de perfiles independientes y acotados. El quality gate ejecuta
-87 reglas sin navegador y dos recorridos smoke en Chromium; la cobertura
+99 reglas sin navegador y dos recorridos smoke en Chromium; la cobertura
 crítica restante rota durante la semana:
 
 ```bash
@@ -141,7 +141,7 @@ regresión manual permite elegir `smoke`, `critical`, `integration`, `tarifas`,
 `reglas` o `full`. Los cuatro turnos nocturnos preservan emisión, BMI, todos los
 perfiles, ocho parejas plan/red, cuatro frecuencias, cuatro deducibles y tres
 idiomas. `full`
-abarca 3246 tests entre Chromium y Firefox y se divide en cuatro shards, pero
+abarca 3270 tests entre Chromium y Firefox y se divide en cuatro shards, pero
 solo debe lanzarse en una ventana autorizada. Cada variante exhaustiva de
 tarifas recorre dinámicamente todos los países del selector y puede crear
 muchas pólizas.

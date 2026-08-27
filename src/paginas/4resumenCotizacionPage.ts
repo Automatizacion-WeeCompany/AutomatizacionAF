@@ -1,56 +1,39 @@
 import { expect, Page } from "@playwright/test";
+import { DatosTarifaVisible } from "../types/ValidacionTarifas";
+import {
+    obtenerTarifaVisible,
+    TarifaNoDisponibleError,
+} from "../utilidades/ExtraerTarifaVisible";
 
-export class TarifaNoDisponibleError extends Error {
-    constructor(detalle: string) {
-        super(detalle);
-        this.name = 'TarifaNoDisponibleError';
-    }
-}
+export { TarifaNoDisponibleError } from "../utilidades/ExtraerTarifaVisible";
 
 export class ResumenCotizacionPage {
     constructor(private readonly page: Page) { }
 
-    async obtenerTarifaAplicable() {
+    async obtenerTarifaAplicable(): Promise<DatosTarifaVisible> {
         const frame = this.page.frameLocator('iframe#ifCotizador');
-        const tarifas = frame.locator(
-            '#ContainerPlan1 .container__price__info .monto:visible, .container__price__info .monto:visible',
+        const tarifaPlanSeleccionado = frame.locator(
+            '#ContainerPlan1 .container__price__info .monto:visible',
         );
-
-        let textos: string[] = [];
-        const obtenerTarifaPositiva = (valores: string[]) => valores.find((texto) => {
-            const coincidencia = texto.match(/\$\s*([\d,.]+)\s*(?:USD)?/i);
-            if (!coincidencia) {
-                return false;
-            }
-
-            const monto = Number(coincidencia[1].replace(/,/g, ''));
-            return Number.isFinite(monto) && monto > 0;
-        });
-
-        try {
-            await expect.poll(
-                async () => {
-                    textos = (await tarifas.allInnerTexts())
-                        .map((texto) => texto.replace(/\s+/g, ' ').trim())
-                        .filter(Boolean);
-                    return Boolean(obtenerTarifaPositiva(textos));
+        const tarifasVisibles = frame.locator('.container__price__info .monto:visible');
+        const tarifa = await obtenerTarifaVisible(
+            [
+                {
+                    locator: tarifaPlanSeleccionado,
+                    selector: '#ContainerPlan1 .container__price__info .monto:visible',
                 },
                 {
-                    timeout: 30000,
-                    message: 'No se mostró una tarifa para la configuración seleccionada',
+                    locator: tarifasVisibles,
+                    selector: '.container__price__info .monto:visible',
                 },
-            ).toBe(true);
-        } catch {
-            throw new TarifaNoDisponibleError(
-                `No se mostró una tarifa monetaria positiva. Valores visibles: ${textos.join(' | ') || 'ninguno'}`,
-            );
-        }
-
-        const tarifa = obtenerTarifaPositiva(textos);
-
+            ],
+            {
+                mensaje: 'No se mostró una tarifa para la configuración seleccionada',
+            },
+        );
         if (!tarifa) {
             throw new TarifaNoDisponibleError(
-                `La cotización no generó una tarifa monetaria positiva. Valores visibles: ${textos.join(' | ') || 'ninguno'}`,
+                'La cotización no generó una tarifa monetaria positiva',
             );
         }
 

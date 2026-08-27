@@ -1,52 +1,47 @@
-import { Page } from "@playwright/test";
+import { expect, Page } from "@playwright/test";
 import { esperarOpcionesEnSelect } from "../utilidades/SelectAleatoreo";
 
 export class SeleccionarPlanesAFPage {
   constructor(private readonly page: Page) {}
 
+  private async seleccionarPlan(plan: string, valor: string) {
+    const iframe = this.page.frameLocator("iframe#ifCotizador");
+    const selectorPlan = iframe.locator("#CotizarTab #changePlan");
+    const opcion = selectorPlan.locator(`label[for="${plan}"]`);
+    const radio = selectorPlan.locator(`input[name="optionPlan"][value="${valor}"]`);
+
+    await expect(selectorPlan).toBeVisible({ timeout: 15000 });
+
+    for (let intento = 1; intento <= 3; intento++) {
+      await selectorPlan.click();
+      const opcionesAbiertas = await opcion
+        .waitFor({ state: "visible", timeout: 5000 })
+        .then(() => true)
+        .catch(() => false);
+
+      if (!opcionesAbiertas) {
+        continue;
+      }
+
+      await opcion.click();
+      await expect(radio).toBeChecked({ timeout: 15000 });
+      return;
+    }
+
+    throw new Error(`No se pudo abrir la lista para seleccionar el plan ${plan}`);
+  }
+
   async seleccionarPlanSuperior() {
-    await this.page
-      .frameLocator("iframe#ifCotizador")
-      .locator("#changePlan")
-      .click();
-    await this.page
-      .frameLocator("iframe#ifCotizador")
-      .locator('label[for="Superior"]')
-      .nth(0)
-      .click();
+    await this.seleccionarPlan("Superior", "1");
   }
   async seleccionarPlanOptima() {
-    await this.page
-      .frameLocator("iframe#ifCotizador")
-      .locator("#changePlan")
-      .click();
-    await this.page
-      .frameLocator("iframe#ifCotizador")
-      .locator('label[for="Optima"]')
-      .nth(0)
-      .click();
+    await this.seleccionarPlan("Optima", "2");
   }
   async seleccionarPlanVital() {
-    await this.page
-      .frameLocator("iframe#ifCotizador")
-      .locator("#changePlan")
-      .click();
-    await this.page
-      .frameLocator("iframe#ifCotizador")
-      .locator('label[for="Vital"]')
-      .nth(0)
-      .click();
+    await this.seleccionarPlan("Vital", "3");
   }
   async seleccionarPlanProtect() {
-    await this.page
-      .frameLocator("iframe#ifCotizador")
-      .locator("#changePlan")
-      .click();
-    await this.page
-      .frameLocator("iframe#ifCotizador")
-      .locator('label[for="Protect"]')
-      .nth(0)
-      .click();
+    await this.seleccionarPlan("Protect", "4");
   }
 
   private async seleccionarRedProveedores(textoRed: string) {

@@ -1,6 +1,11 @@
 import { expect, Page } from "@playwright/test";
 import { Idioma } from "src/utilidades/validacionIdiomas";
 import { registrarInfo } from "../utilidades/LoggerPruebas";
+import { DatosTarifaVisible } from "../types/ValidacionTarifas";
+import {
+    obtenerTarifaVisible,
+    TarifaNoDisponibleError,
+} from "../utilidades/ExtraerTarifaVisible";
 
 const EVALUACION_POR_IDIOMA: Record<
     Idioma,
@@ -28,6 +33,31 @@ export class AplicacionEnEvaluacionBMIError extends Error {
 
 export class ApliacionCompletaPage {
     constructor(private readonly page: Page) { }
+
+    async obtenerTarifaAplicable(
+        opcional = false,
+    ): Promise<DatosTarifaVisible | undefined> {
+        const selector = '#costo_ConcluirPoliza:visible';
+        const tarifa = await obtenerTarifaVisible(
+            [
+                {
+                    locator: this.page.frameLocator('iframe#ifCotizador').locator(selector),
+                    selector,
+                },
+            ],
+            {
+                timeout: opcional ? 5000 : 30000,
+                opcional,
+                mensaje: 'La pantalla de aplicación completa no mostró el costo',
+            },
+        );
+        if (!tarifa && !opcional) {
+            throw new TarifaNoDisponibleError(
+                'La aplicación completa no generó una tarifa monetaria positiva',
+            );
+        }
+        return tarifa;
+    }
 
     async validarDisponibleParaPagoSinBMI(idioma: Idioma) {
         const { patron } = EVALUACION_POR_IDIOMA[idioma];

@@ -7,9 +7,82 @@ export interface OpcionPaisResidencia {
 
 export type EstadoValidacionTarifa =
   | 'Exitosa'
+  | 'Diferencia'
   | 'SinTarifa'
+  | 'SinReferencia'
   | 'EvaluacionBMI'
   | 'Error';
+
+export interface DatosTarifaVisible {
+  texto: string;
+  monto: number;
+  valoresVisibles: string[];
+  selector: string;
+}
+
+export interface CalculoTarifa {
+  version: string;
+  vigenteDesde: string;
+  moneda: string;
+  paisIso: string;
+  zonaAdultos: string;
+  zonaDependientes: string;
+  plan: string;
+  red: string;
+  deducibleDentro: number;
+  deducibleFuera: number;
+  frecuencia: string;
+  recargo: number;
+  recibos: number;
+  tarifaTitular: number;
+  tarifaConyuge: number;
+  tarifaDependientes: number;
+  montoBase: number;
+  montoRecargo: number;
+  montoAnual: number;
+  montoPorRecibo: number;
+}
+
+export interface ComparacionTarifa {
+  version: string;
+  vigenteDesde: string;
+  moneda: string;
+  montoEsperado: number;
+  montoObtenido: number;
+  diferencia: number;
+  coincide: boolean;
+  textoVisible: string;
+  explicacion: string;
+  calculo: CalculoTarifa;
+}
+
+export type PantallaTarifa =
+  | 'Cotizacion'
+  | 'ResumenPlanesCotizados'
+  | 'ConfirmacionPlanPago'
+  | 'AplicacionCompleta'
+  | 'MetodoPago';
+
+export type EstadoValidacionTarifaPantalla =
+  | 'Exitosa'
+  | 'Diferencia'
+  | 'SinReferencia'
+  | 'Error';
+
+export interface ValidacionTarifaPantalla {
+  pantalla: PantallaTarifa;
+  fechaHora: string;
+  estado: EstadoValidacionTarifaPantalla;
+  selector: string;
+  tarifaVisible: DatosTarifaVisible;
+  comparacion?: ComparacionTarifa;
+  detalle?: string;
+}
+
+export type ValidarTarifaEnPantalla = (
+  pantalla: PantallaTarifa,
+  tarifaVisible: DatosTarifaVisible,
+) => Promise<ComparacionTarifa>;
 
 export interface VarianteValidacionTarifa {
   escenario: string;
@@ -32,6 +105,9 @@ export interface ResultadoValidacionTarifa {
   variante: VarianteValidacionTarifa;
   estado: EstadoValidacionTarifa;
   tarifaAplicable?: string;
+  validacionTarifa?: ComparacionTarifa;
+  validacionesTarifa?: ValidacionTarifaPantalla[];
+  reporteTarifaJson?: string;
   folioPoliza?: string;
   detalle?: string;
 }
@@ -40,7 +116,9 @@ export interface ResumenPaisValidacionTarifa extends OpcionPaisResidencia {
   casosEsperados: number;
   casosEjecutados: number;
   exitosos: number;
+  diferencias: number;
   sinTarifa: number;
+  sinReferencia: number;
   evaluacionesBMI: number;
   errores: number;
   coberturaCompleta: boolean;
@@ -52,7 +130,9 @@ export interface ResumenValidacionTarifas {
   casosEsperados: number;
   casosEjecutados: number;
   exitosos: number;
+  diferencias: number;
   sinTarifa: number;
+  sinReferencia: number;
   evaluacionesBMI: number;
   errores: number;
   casosFaltantes: number;

@@ -33,7 +33,7 @@ export type ModoComparacion =
   | "nombre"
   | "plan";
 
-interface GrupoDependienteEsperado {
+export interface GrupoDependienteEsperado {
   relacion: string;
   fuenteRelacion: string;
   campos: DatoCotizacionCapturado[];
@@ -719,6 +719,57 @@ function campoEnGrupo(
   return coincidencias[coincidencias.length - 1];
 }
 
+export function agruparDependientesCapturados(
+  campos: DatoCotizacionCapturado[],
+) {
+  const grupos: GrupoDependienteEsperado[] = [];
+  let actual: GrupoDependienteEsperado | undefined;
+
+  for (const campo of campos) {
+    const relacion = RELACIONES_DEPENDIENTES[campo.clave];
+    if (relacion) {
+      actual = {
+        relacion,
+        fuenteRelacion: `cotizador#${campo.clave}`,
+        campos: [],
+      };
+      grupos.push(actual);
+      continue;
+    }
+    actual?.campos.push(campo);
+  }
+
+  const unicos = new Map<string, GrupoDependienteEsperado>();
+  const sinIdentidad: GrupoDependienteEsperado[] = [];
+
+  for (const grupo of grupos) {
+    const identidad = [
+      grupo.relacion,
+      valorCampo(campoEnGrupo(grupo, "txtNombreDependiente")) ?? "",
+      valorCampo(campoEnGrupo(grupo, "txtApPatDependiente")) ?? "",
+      valorCampo(campoEnGrupo(grupo, "datepickerBirthday")) ?? "",
+    ].map(normalizarTexto);
+    const tieneDatosPersona = identidad.slice(1).some(Boolean);
+
+    if (!tieneDatosPersona) {
+      sinIdentidad.push(grupo);
+      continue;
+    }
+
+    const clave = identidad.join("|");
+    const existente = unicos.get(clave);
+    if (existente) {
+      // El listener captura nuevamente todos los controles visibles al pulsar
+      // Guardar. Se combinan ambas observaciones y campoEnGrupo toma la última.
+      existente.campos.push(...grupo.campos);
+    } else {
+      unicos.set(clave, grupo);
+    }
+  }
+
+  return [...unicos.values(), ...sinIdentidad];
+}
+
 function claveNormalizada(valor: string) {
   return normalizarTexto(valor).replace(/[^A-Z0-9]/g, "");
 }
@@ -1361,24 +1412,7 @@ export class ComparacionDatosEmisionClaimsFlow {
   }
 
   private obtenerDependientesEsperados(datos: DatosCotizacionGuardados) {
-    const grupos: GrupoDependienteEsperado[] = [];
-    let actual: GrupoDependienteEsperado | undefined;
-
-    for (const campo of datos.campos) {
-      const relacion = RELACIONES_DEPENDIENTES[campo.clave];
-      if (relacion) {
-        actual = {
-          relacion,
-          fuenteRelacion: `cotizador#${campo.clave}`,
-          campos: [],
-        };
-        grupos.push(actual);
-        continue;
-      }
-      actual?.campos.push(campo);
-    }
-
-    return grupos;
+    return agruparDependientesCapturados(datos.campos);
   }
 
   private compararCampoDependiente(

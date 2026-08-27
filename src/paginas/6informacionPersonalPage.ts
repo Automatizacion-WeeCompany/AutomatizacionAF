@@ -2,34 +2,28 @@ import { expect, Page } from "@playwright/test";
 import { seleccionarOpcionAleatoriaDesdeLocator } from "src/utilidades/SelectAleatoreo";
 
 export class InformacionPersonalPage {
+    private paisNacimientoDependiente?: string;
+
     constructor(private readonly page: Page) { }
     async IngresaSegundoNombre(numeroFlujo: number) {
         if (!Number.isInteger(numeroFlujo) || numeroFlujo <= 0) {
             throw new Error(`El número de flujo debe ser un entero positivo: ${numeroFlujo}`);
         }
 
-        const segundoNombre = `WeeBoot ${numeroFlujo}`;
+        let consecutivo = numeroFlujo;
+        let sufijo = '';
+        while (consecutivo > 0) {
+            consecutivo--;
+            sufijo = String.fromCharCode(65 + (consecutivo % 26)) + sufijo;
+            consecutivo = Math.floor(consecutivo / 26);
+        }
+
+        const segundoNombre = `WeeBoot ${sufijo}`;
         const campoSegundoNombre = this.page.frameLocator('iframe#ifCotizador').locator('#txtNombreSegundo');
 
         await campoSegundoNombre.waitFor({ state: 'visible', timeout: 15000 });
-        await campoSegundoNombre.evaluate((elemento, valor) => {
-            const input = elemento as HTMLInputElement;
-            const conservaValidacionLetras = input.classList.contains('ValidLetters');
-            const asignarValor = Object.getOwnPropertyDescriptor(
-                HTMLInputElement.prototype,
-                'value',
-            )?.set;
-
-            input.classList.remove('ValidLetters');
-            asignarValor?.call(input, valor);
-            input.dispatchEvent(new Event('input', { bubbles: true }));
-            input.dispatchEvent(new Event('change', { bubbles: true }));
-            asignarValor?.call(input, valor);
-
-            if (conservaValidacionLetras) {
-                input.classList.add('ValidLetters');
-            }
-        }, segundoNombre);
+        await campoSegundoNombre.fill(segundoNombre);
+        await campoSegundoNombre.press('Tab');
         await expect(campoSegundoNombre).toHaveValue(segundoNombre);
         return segundoNombre;
     }
@@ -222,17 +216,36 @@ export class InformacionPersonalPage {
     }
     async IngresaFechaNacimientoBeneficiario() {
         const { faker } = await import("@faker-js/faker");
-        const Dia = faker.number.int({ min: 1, max: 30 }).toString();
+        const Dia = faker.number.int({ min: 1, max: 28 }).toString();
         const Mes = faker.number.int({ min: 1, max: 12 }).toString();
         const Anio = faker.number.int({ min: 1950, max: 2007 }).toString();
         const FechaNacimientoBeneficiario = `${Mes}/${Dia}/${Anio}`;
-        await this.page.frameLocator('iframe#ifCotizador').locator('#datepickerBirthdayBeneficiario').pressSequentially(FechaNacimientoBeneficiario);
+        const fechaNacimiento = this.page
+            .frameLocator('iframe#ifCotizador')
+            .locator('#datepickerBirthdayBeneficiario');
+
+        await expect(fechaNacimiento).toBeVisible({ timeout: 15000 });
+        if ((await fechaNacimiento.inputValue()).trim()) {
+            return;
+        }
+        if (await fechaNacimiento.isDisabled()) {
+            await expect(fechaNacimiento).not.toHaveValue('');
+            return;
+        }
+
+        await fechaNacimiento.pressSequentially(FechaNacimientoBeneficiario);
+        await fechaNacimiento.press('Tab');
+        // La relación Cónyuge puede autocompletar y bloquear la fecha al perder foco.
+        await expect(fechaNacimiento).not.toHaveValue('');
     }
     async SeleccionaPaisRecidenciaBeneficiario() {
         const select = this.page
             .frameLocator('iframe#ifCotizador')
             .locator('#PaisResidenciaSelectBenef');
         await expect(select).toBeVisible({ timeout: 15000 });
+        if ((await select.inputValue()).trim()) {
+            return;
+        }
         if (await select.isDisabled()) {
             await expect(select).not.toHaveValue('');
             return;
@@ -244,6 +257,9 @@ export class InformacionPersonalPage {
             .frameLocator('iframe#ifCotizador')
             .locator('#PaisCiudadaniaSelectBenef');
         await expect(select).toBeVisible({ timeout: 15000 });
+        if ((await select.inputValue()).trim()) {
+            return;
+        }
         if (await select.isDisabled()) {
             await expect(select).not.toHaveValue('');
             return;
@@ -283,8 +299,7 @@ export class InformacionPersonalPage {
         const botonAgregarHijo = iframe
             .getByRole('button', {
                 name: /Add Child|Agregar Hijo|Adicionar Filho/i,
-            })
-            .first();
+            });
         await expect(botonAgregarHijo).toBeVisible({ timeout: 15000 });
         await botonAgregarHijo.click({ timeout: 15000 });
         await expect(iframe.locator('#ModalAddDependiente')).toBeVisible({ timeout: 15000 });
@@ -294,8 +309,7 @@ export class InformacionPersonalPage {
             .frameLocator('iframe#ifCotizador')
             .getByRole('button', {
                 name: /Add Spouse\s*\/\s*Domestic Partner|Agregar Cónyuge\s*\/\s*Pareja Doméstica|Adicionar Cônjuge\s*\/\s*Parceiro(?:\(a\))?/i,
-            })
-            .first();
+            });
         await expect(botonAgregarConyuge).toBeVisible({ timeout: 15000 });
         await botonAgregarConyuge.click();
         await expect(
@@ -375,8 +389,27 @@ export class InformacionPersonalPage {
         await expect(this.page.frameLocator('iframe#ifCotizador').locator('#optFemeninoBenef')).toBeChecked();
     }
     async SeleccionaPaisNacimientoDependiente() {
-        await this.page.frameLocator('iframe#ifCotizador').locator('#PaisNacimientoSelectDependiente').click();
-        await seleccionarOpcionAleatoriaDesdeLocator(this.page.frameLocator('iframe#ifCotizador').locator('#PaisNacimientoSelectDependiente'));
+        const select = this.page
+            .frameLocator('iframe#ifCotizador')
+            .locator('#PaisNacimientoSelectDependiente');
+        const seleccion = await seleccionarOpcionAleatoriaDesdeLocator(select);
+        this.paisNacimientoDependiente = seleccion.value;
+        await expect(select).toHaveValue(seleccion.value);
+    }
+    async AseguraPaisNacimientoDependiente() {
+        if (!this.paisNacimientoDependiente) {
+            throw new Error('No se conservó el país de nacimiento seleccionado para el dependiente');
+        }
+
+        const select = this.page
+            .frameLocator('iframe#ifCotizador')
+            .locator('#PaisNacimientoSelectDependiente');
+
+        await expect(select).toBeVisible({ timeout: 15000 });
+        if ((await select.inputValue()) !== this.paisNacimientoDependiente) {
+            await select.selectOption(this.paisNacimientoDependiente, { timeout: 15000 });
+        }
+        await expect(select).toHaveValue(this.paisNacimientoDependiente);
     }
     async IngresaEstaturaDependiente(estaturaCm = 135) {
         const alturaDependiente = estaturaCm;
@@ -469,13 +502,95 @@ export class InformacionPersonalPage {
     }
     async ClickBtnGuardarHijo() {
         const iframe = this.page.frameLocator('iframe#ifCotizador');
-        const botonGuardar = iframe.locator('#saveDatos');
+        const modal = iframe.locator('#ModalAddDependiente');
+        const botonGuardar = iframe.locator('#saveDatos:visible');
+        const alertaError = iframe.locator('#toast-container .toast-error:visible').last();
+
+        await expect(modal).toBeVisible({ timeout: 15000 });
         await expect(botonGuardar).toBeVisible({ timeout: 15000 });
         await expect(botonGuardar).toBeEnabled({ timeout: 15000 });
+
+        const guardadoDependiente = this.page.waitForResponse(
+            response => response.request().method() === 'POST'
+                && response.url().includes('/API/Cotizador/AddDependientesAmerican'),
+            { timeout: 30000 },
+        );
+
         await botonGuardar.click({ timeout: 15000 });
-        await expect(
-            iframe.locator('#ModalAddDependiente')
-        ).toBeHidden({ timeout: 15000 });
+
+        let resultado:
+            | { tipo: 'respuesta'; respuesta: Awaited<typeof guardadoDependiente> }
+            | { tipo: 'validacion'; mensaje: string };
+
+        try {
+            resultado = await Promise.race([
+                guardadoDependiente.then(respuesta => ({
+                    tipo: 'respuesta' as const,
+                    respuesta,
+                })),
+                alertaError.waitFor({ state: 'visible', timeout: 30000 }).then(async () => ({
+                    tipo: 'validacion' as const,
+                    mensaje: (await alertaError.innerText()).replace(/\s+/g, ' ').trim(),
+                })),
+            ]);
+        } catch {
+            const camposInvalidos = await modal
+                .locator('.has-error:visible, [style*="border"][style*="EB0029"]:visible')
+                .evaluateAll(elementos => elementos.map(elemento => {
+                    const campo = elemento as HTMLInputElement;
+                    return campo.id || campo.name || campo.getAttribute('placeholder') || campo.tagName;
+                }));
+            throw new Error(
+                `Guardar dependiente no produjo una petición ni un mensaje de validación en 30 s.`
+                + ` Campos marcados: ${camposInvalidos.join(', ') || 'ninguno'}.`,
+            );
+        }
+
+        if (resultado.tipo === 'validacion') {
+            const camposInvalidos = await modal
+                .locator('.has-error:visible, [style*="border"][style*="EB0029"]:visible')
+                .evaluateAll(elementos => elementos.map(elemento => {
+                    const campo = elemento as HTMLInputElement;
+                    return campo.id || campo.name || campo.getAttribute('placeholder') || campo.tagName;
+                }));
+            throw new Error(
+                `El formulario impidió guardar el dependiente: ${resultado.mensaje || 'validación sin mensaje'}.`
+                + ` Campos marcados: ${camposInvalidos.join(', ') || 'ninguno'}.`,
+            );
+        }
+
+        if (!resultado.respuesta.ok()) {
+            throw new Error(
+                `No se pudo guardar el dependiente: HTTP ${resultado.respuesta.status()}`,
+            );
+        }
+
+        let cuerpo: {
+            IsActionPermitted?: boolean;
+            IsOk?: boolean;
+            Mensaje?: string;
+            Data?: { Table?: Array<{ Dato?: number | string; Mensaje?: string }> };
+        };
+        try {
+            cuerpo = await resultado.respuesta.json();
+        } catch {
+            throw new Error('Guardar dependiente devolvió una respuesta que no es JSON');
+        }
+
+        const detalle = cuerpo.Data?.Table?.[0];
+        if (
+            cuerpo.IsActionPermitted !== true
+            || cuerpo.IsOk !== true
+            || Number(detalle?.Dato) !== 1
+        ) {
+            const diagnostico = JSON.stringify(cuerpo).slice(0, 1000);
+            throw new Error(
+                `El servicio rechazó guardar el dependiente: ${detalle?.Mensaje || cuerpo.Mensaje || 'respuesta de negocio no exitosa'}.`
+                + ` Respuesta: ${diagnostico}`,
+            );
+        }
+
+        await expect(modal).toBeHidden({ timeout: 15000 });
     }
     async ClickBtnCerrarModalDependiente() {
         await this.page.frameLocator('iframe#ifCotizador').locator('#unloadContent').click();

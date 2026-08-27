@@ -152,18 +152,28 @@ En radios y checkboxes se captura el primer `label[for]` con texto visible, omit
 
 ### Validación de tarifas AF
 
-Este recorrido es independiente de Cotizador y Emisión Claims, aunque reutiliza
-`CotizacionAFBaseFlow` y sus Page Objects. En el `beforeAll` obtiene directamente
-las opciones válidas de `#PaisResidenciaSelect`; no mantiene un catálogo estático.
+La comparación contra la tarifa de referencia vive en `CotizacionAFBaseFlow` y,
+por tanto, es obligatoria en Cotizador, revisión BMI, Emisión Claims y la matriz
+comercial. La matriz conserva un recorrido independiente para obtener en el
+`beforeAll` las opciones válidas de `#PaisResidenciaSelect` y producir cobertura
+por país; los montos esperados provienen del catálogo versionado `2026-12`.
 Después calcula `países disponibles × escenarios de emisión`, que incluye las 32
 configuraciones comerciales, las tres composiciones familiares y el perfil
 individual. Los perfiles cuyo objetivo es BMI se excluyen antes de la ejecución.
 
-Cada caso selecciona el país por su identificador, valida una tarifa monetaria
-positiva en el resumen, recorre solicitud, cuestionarios, firmas y pago, comprueba
-que nunca aparezca la salida de evaluación BMI y exige un folio de póliza de 12
-dígitos. El log incremental y los reportes finales permiten auditar cobertura por
-país y por variante aun cuando otro caso falle.
+Cada caso selecciona el país por su identificador y calcula una sola referencia
+con titular, cónyuge, dependientes, frecuencia y deducible. Ese pago por recibo
+se vuelve a comparar en las cinco pantallas donde se muestra: Cotización,
+Resumen de planes cotizados, Confirmación de plan y pago, Aplicación completa y
+Método de pago. En evaluación BMI, Aplicación completa sólo se registra si el
+costo está visible. Sólo Mensual aplica 8% de recargo; las demás frecuencias
+aplican 0%.
+
+Cada comparación exitosa agrega una anotación `tarifa-validada` al resultado de
+Playwright. Paralelamente, cada cotización actualiza un JSON incremental con la
+pantalla, selector, texto visible, versión, zonas tarifarias, componentes,
+esperado, obtenido y diferencia. La matriz comercial mantiene además su log y
+sus consolidados por país y variante aun cuando otro caso falle.
 
 ## Flujo de datos
 

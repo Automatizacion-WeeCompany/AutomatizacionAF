@@ -36,6 +36,7 @@
     "test:flujo:normal": "NODE_NO_WARNINGS=1 playwright test src/tests/aplicacion/emision-directa.spec.ts --project=Chromium --headed --grep \"póliza Individual.*Superior Ultra Anual \\| Esp\"",
     "clean": "rd /s /q dist && rd /s /q test-results && rd /s /q node_modules",
     "build": "npx tsc --noEmit",
+    "generar:catalogo:tarifas": "node scripts/generarCatalogoTarifas.js",
     "merge-polizas": "ts-node src/utilidades/consolidarReportesPolizas.ts",
     "test:full": "playwright test && npm run merge-polizas",
     "test:e2e": "playwright test --config=src/configuraciones/playwright.config.ts"

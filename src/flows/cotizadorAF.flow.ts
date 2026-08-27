@@ -3,7 +3,10 @@ import { InicioSesionAFPage } from "../paginas/inicioSesionAFPage";
 import { HomeAFPage } from "../paginas/homeAFPage";
 import { CotizacionesPropuestasAFPage } from "../paginas/1cotizacionesPropuestasAFPage";
 import { InicioCotizacionDatosPersonalesAFPage } from "../paginas/2inicioCotizacionDatosPersonalesAFPage";
-import { OpcionPaisResidencia } from "../types/ValidacionTarifas";
+import {
+  OpcionPaisResidencia,
+  ValidarTarifaEnPantalla,
+} from "../types/ValidacionTarifas";
 import { SeleccionarPlanesAFPage } from "../paginas/3seleccionPlanesAFPage";
 import { ResumenCotizacionPage } from "../paginas/4resumenCotizacionPage";
 import { ResumenPlanesCotizadosPage } from "../paginas/5resumenCotizacionPage";
@@ -323,20 +326,25 @@ export class PasoTresCotizacionFlow {
     this.resumenCotizacionPage = new ResumenCotizacionPage(this.page);
   }
 
-  async resumenCotizacion(
-    IdiomaCotizacion: string,
-    validarTarifaAplicable = false,
-  ) {
+  async resumenCotizacion(contexto: {
+    idiomaCotizacion: string;
+    validarTarifaEnPantalla: ValidarTarifaEnPantalla;
+  }) {
     await validarPantallaPorIdioma({
       page: this.page,
       pantalla: "ResumenCotizacion",
-      idioma: IdiomaCotizacion as Idioma,
+      idioma: contexto.idiomaCotizacion as Idioma,
     });
-    const tarifaAplicable = validarTarifaAplicable
-      ? await this.resumenCotizacionPage.obtenerTarifaAplicable()
-      : undefined;
+    const tarifaVisible = await this.resumenCotizacionPage.obtenerTarifaAplicable();
+    const validacionTarifa = await contexto.validarTarifaEnPantalla(
+      'Cotizacion',
+      tarifaVisible,
+    );
     await this.resumenCotizacionPage.ClickBtnContinuar();
-    return tarifaAplicable;
+    return {
+      tarifaAplicable: tarifaVisible.texto,
+      validacionTarifa,
+    };
   }
 }
 
@@ -346,12 +354,18 @@ export class PasoCuatroResumenCotizacionFlow {
     this.resumenPlanesCotizadosPage = new ResumenPlanesCotizadosPage(this.page);
   }
 
-  async resumenPlanesCot(IdiomaCotizacion: string) {
+  async resumenPlanesCot(
+    IdiomaCotizacion: string,
+    validarTarifaEnPantalla: ValidarTarifaEnPantalla,
+  ) {
     await validarPantallaPorIdioma({
       page: this.page,
       pantalla: "ResumenPlanesCotizados",
       idioma: IdiomaCotizacion as Idioma,
     });
+    const tarifaVisible =
+      await this.resumenPlanesCotizadosPage.obtenerTarifaAplicable();
+    await validarTarifaEnPantalla('ResumenPlanesCotizados', tarifaVisible);
     await this.resumenPlanesCotizadosPage.ClickBtnAplicarAhora();
     await validarPantallaPorIdioma({
       page: this.page,
@@ -576,6 +590,7 @@ export class PasoCincoInformacionPersonalFlow {
       await this.informacionPersonalPage.IngresaNumeroIdentificacionConyuge();
       await this.informacionPersonalPage.SeleccionaPaisExpedicionIdConyuge();
     }
+    await this.informacionPersonalPage.AseguraPaisNacimientoDependiente();
     await this.informacionPersonalPage.SeleccionaNoEstudianteConyuge();
     await this.informacionPersonalPage.ClickBtnGuardarHijo();
   }
@@ -644,7 +659,8 @@ export class PasoCincoInformacionPersonalFlow {
       );
       await this.informacionPersonalPage.SeleccionaCiudadaniaDependiente();
       // Los selects de país vuelven a renderizar parte del modal y pueden
-      // limpiar el sexo; se selecciona al final para asegurar su persistencia.
+      // limpiar valores previos; se restauran al final para asegurar su persistencia.
+      await this.informacionPersonalPage.AseguraPaisNacimientoDependiente();
       switch (sexo) {
         case "Masculino":
           await this.informacionPersonalPage.ClickCheckSexoNacerDependienteMasculino();
@@ -825,7 +841,12 @@ export class PasoOchoConfirmacionDePlanYPagoFlow {
     this.confirmacionDePlanYPagoPage = new ConfirmacionDePlanYPagoPage(page);
   }
 
-  async CapturarConfirmacionDePlanYPago() {
+  async CapturarConfirmacionDePlanYPago(
+    validarTarifaEnPantalla: ValidarTarifaEnPantalla,
+  ) {
+    const tarifaVisible =
+      await this.confirmacionDePlanYPagoPage.obtenerTarifaAplicable();
+    await validarTarifaEnPantalla('ConfirmacionPlanPago', tarifaVisible);
     await this.confirmacionDePlanYPagoPage.ClickBtnSiguienteConfirmacionDePlanYPago();
   }
 }
@@ -871,12 +892,29 @@ export class PasoOnceAplicacionCompletaFlow {
     this.aplicacionCompletaPage = new ApliacionCompletaPage(page);
   }
 
-  async CapturarAplicacionCompleta() {
+  async CapturarAplicacionCompleta(
+    validarTarifaEnPantalla: ValidarTarifaEnPantalla,
+  ) {
+    const tarifaVisible = await this.aplicacionCompletaPage.obtenerTarifaAplicable();
+    if (!tarifaVisible) {
+      throw new Error('La aplicación completa no conservó la tarifa visible');
+    }
+    await validarTarifaEnPantalla('AplicacionCompleta', tarifaVisible);
     await this.aplicacionCompletaPage.clicBtnPagarAhora();
   }
 
-  async ValidarAplicacionEnEvaluacion(idioma: Idioma) {
-    return this.aplicacionCompletaPage.validarCotizacionEnEvaluacion(idioma);
+  async ValidarAplicacionEnEvaluacion(
+    idioma: Idioma,
+    validarTarifaEnPantalla: ValidarTarifaEnPantalla,
+  ) {
+    const resultado =
+      await this.aplicacionCompletaPage.validarCotizacionEnEvaluacion(idioma);
+    const tarifaVisible =
+      await this.aplicacionCompletaPage.obtenerTarifaAplicable(true);
+    if (tarifaVisible) {
+      await validarTarifaEnPantalla('AplicacionCompleta', tarifaVisible);
+    }
+    return resultado;
   }
 
   async ValidarDisponibleParaPagoSinBMI(idioma: Idioma) {
@@ -927,10 +965,13 @@ export class PasoTreceMetodoPagoFlow {
 
   async CapturarMetodoPago(
     IdiomaCotizacion: string,
+    validarTarifaEnPantalla: ValidarTarifaEnPantalla,
     datosPago: DatosTarjetaPago = DATOS_PAGO_SANDBOX,
   ) {
     const idioma = IdiomaCotizacion as Idioma;
 
+    const tarifaVisible = await this.metodoPagoPage.obtenerTarifaAplicable();
+    await validarTarifaEnPantalla('MetodoPago', tarifaVisible);
     await this.metodoPagoPage.clickBtnTarjetaDeCredito();
     await this.modalSecureCheckoutPage.IngresaCorreoElectronico(datosPago.correo);
     await this.modalSecureCheckoutPage.IngresaNumeroTelefonico(datosPago.telefono);

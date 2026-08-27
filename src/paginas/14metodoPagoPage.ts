@@ -1,5 +1,10 @@
 import { expect, Page } from "@playwright/test";
 import { Idioma } from '../utilidades/validacionIdiomas';
+import { DatosTarifaVisible } from '../types/ValidacionTarifas';
+import {
+    obtenerTarifaVisible,
+    TarifaNoDisponibleError,
+} from '../utilidades/ExtraerTarifaVisible';
 
 export interface DatosTarjetaPago {
     correo: string;
@@ -65,6 +70,27 @@ export class MetodoPagoPage {
 
     private get frameMetodosPago() {
         return this.frameAplicacion.frameLocator('iframe#__buttonlist');
+    }
+
+    async obtenerTarifaAplicable(): Promise<DatosTarifaVisible> {
+        const selector = '#totalAmount:visible';
+        const tarifa = await obtenerTarifaVisible(
+            [
+                {
+                    locator: this.frameAplicacion.locator(selector),
+                    selector,
+                    sufijoTexto: async () =>
+                        this.frameAplicacion.locator('#typeCurrency:visible').innerText(),
+                },
+            ],
+            { mensaje: 'La pantalla de método de pago no mostró el costo total' },
+        );
+        if (!tarifa) {
+            throw new TarifaNoDisponibleError(
+                'El método de pago no generó una tarifa monetaria positiva',
+            );
+        }
+        return tarifa;
     }
 
     async clickBtnTarjetaDeCredito() {

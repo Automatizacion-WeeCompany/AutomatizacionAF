@@ -85,7 +85,7 @@ demanda para que una matriz de miles de casos no bloquee cada cambio:
 
 ```mermaid
 flowchart LR
-    A["PR / push"] --> B["87 reglas + 2 smoke Chromium"]
+    A["PR / push"] --> B["99 reglas + 2 smoke Chromium"]
     C["Lunes a viernes"] --> D["2 E2E rotativos + 1 Claims"]
     E["Sábado"] --> F["2 smoke Firefox + tarifas 1 × 5"]
     G["Manual"] --> H["Perfil focalizado o full en 4 shards"]

@@ -29,7 +29,9 @@ interface ResumenVarianteValidacionTarifa {
   casosEsperados: number;
   casosEjecutados: number;
   exitosos: number;
+  diferencias: number;
   sinTarifa: number;
+  sinReferencia: number;
   evaluacionesBMI: number;
   errores: number;
   coberturaCompleta: boolean;
@@ -152,6 +154,8 @@ export class ReporteValidacionTarifas {
       (id) => !casosEjecutadosUnicos.has(id),
     ).length;
     const sinTarifa = contarEstado(this.resultados, 'SinTarifa');
+    const diferencias = contarEstado(this.resultados, 'Diferencia');
+    const sinReferencia = contarEstado(this.resultados, 'SinReferencia');
     const evaluacionesBMI = contarEstado(this.resultados, 'EvaluacionBMI');
     const errores = contarEstado(this.resultados, 'Error');
     const exitosos = contarEstado(this.resultados, 'Exitosa');
@@ -162,7 +166,9 @@ export class ReporteValidacionTarifas {
       casosEsperados: casosEsperados.size,
       casosEjecutados: this.resultados.length,
       exitosos,
+      diferencias,
       sinTarifa,
+      sinReferencia,
       evaluacionesBMI,
       errores,
       casosFaltantes,
@@ -171,7 +177,9 @@ export class ReporteValidacionTarifas {
         casosFaltantes === 0 &&
         casosDuplicados === 0 &&
         exitosos === casosEsperados.size &&
+        diferencias === 0 &&
         sinTarifa === 0 &&
+        sinReferencia === 0 &&
         evaluacionesBMI === 0 &&
         errores === 0,
     };
@@ -184,6 +192,8 @@ export class ReporteValidacionTarifas {
       );
       const exitosos = contarEstado(resultados, 'Exitosa');
       const sinTarifa = contarEstado(resultados, 'SinTarifa');
+      const diferencias = contarEstado(resultados, 'Diferencia');
+      const sinReferencia = contarEstado(resultados, 'SinReferencia');
       const evaluacionesBMI = contarEstado(resultados, 'EvaluacionBMI');
       const errores = contarEstado(resultados, 'Error');
 
@@ -192,13 +202,17 @@ export class ReporteValidacionTarifas {
         casosEsperados: this.metadatos.variantes.length,
         casosEjecutados: resultados.length,
         exitosos,
+        diferencias,
         sinTarifa,
+        sinReferencia,
         evaluacionesBMI,
         errores,
         coberturaCompleta:
           resultados.length === this.metadatos.variantes.length &&
           exitosos === this.metadatos.variantes.length &&
+          diferencias === 0 &&
           sinTarifa === 0 &&
+          sinReferencia === 0 &&
           evaluacionesBMI === 0 &&
           errores === 0,
       };
@@ -215,6 +229,8 @@ export class ReporteValidacionTarifas {
       );
       const exitosos = contarEstado(resultados, 'Exitosa');
       const sinTarifa = contarEstado(resultados, 'SinTarifa');
+      const diferencias = contarEstado(resultados, 'Diferencia');
+      const sinReferencia = contarEstado(resultados, 'SinReferencia');
       const evaluacionesBMI = contarEstado(resultados, 'EvaluacionBMI');
       const errores = contarEstado(resultados, 'Error');
 
@@ -225,13 +241,17 @@ export class ReporteValidacionTarifas {
         casosEsperados: this.metadatos.paises.length,
         casosEjecutados: resultados.length,
         exitosos,
+        diferencias,
         sinTarifa,
+        sinReferencia,
         evaluacionesBMI,
         errores,
         coberturaCompleta:
           resultados.length === this.metadatos.paises.length &&
           exitosos === this.metadatos.paises.length &&
+          diferencias === 0 &&
           sinTarifa === 0 &&
+          sinReferencia === 0 &&
           evaluacionesBMI === 0 &&
           errores === 0,
       };
@@ -252,6 +272,20 @@ export class ReporteValidacionTarifas {
       'FrecuenciaPago',
       'Estado',
       'TarifaAplicable',
+      'VersionTarifa',
+      'MontoEsperado',
+      'MontoObtenido',
+      'Diferencia',
+      'TarifaTitular',
+      'TarifaConyuge',
+      'TarifaDependientes',
+      'MontoBase',
+      'Recargo',
+      'MontoRecargo',
+      'Recibos',
+      'ZonaAdultos',
+      'ZonaDependientes',
+      'ReporteTarifaJson',
       'FolioPoliza',
       'DuracionMs',
       'Escenario',
@@ -271,6 +305,20 @@ export class ReporteValidacionTarifas {
         resultado.variante.frecuenciaPago,
         resultado.estado,
         resultado.tarifaAplicable,
+        resultado.validacionTarifa?.version,
+        resultado.validacionTarifa?.montoEsperado,
+        resultado.validacionTarifa?.montoObtenido,
+        resultado.validacionTarifa?.diferencia,
+        resultado.validacionTarifa?.calculo.tarifaTitular,
+        resultado.validacionTarifa?.calculo.tarifaConyuge,
+        resultado.validacionTarifa?.calculo.tarifaDependientes,
+        resultado.validacionTarifa?.calculo.montoBase,
+        resultado.validacionTarifa?.calculo.recargo,
+        resultado.validacionTarifa?.calculo.montoRecargo,
+        resultado.validacionTarifa?.calculo.recibos,
+        resultado.validacionTarifa?.calculo.zonaAdultos,
+        resultado.validacionTarifa?.calculo.zonaDependientes,
+        resultado.reporteTarifaJson,
         resultado.folioPoliza,
         resultado.duracionMs,
         resultado.variante.escenario,

@@ -29,8 +29,8 @@ obtienen 768 cotizaciones: 576 familiares y 192 individuales. La emisión
 integrada ejecuta las 384 combinaciones cuyo resultado esperado es `Emision`
 por cada escenario de Claims. Validación de tarifas agrega los mismos 384
 escenarios de emisión por navegador y, dentro de cada test, recorre todos los
-países disponibles en la UI. Al usar Chromium y Firefox, la suite registra 3246
-tests al sumar Aplicación, Claims, tarifas y 87 reglas/contratos por proyecto; la
+países disponibles en la UI. Al usar Chromium y Firefox, la suite registra 3270
+tests al sumar Aplicación, Claims, tarifas y 99 reglas/contratos por proyecto; la
 cantidad real de casos de tarifa es dinámica: `países × 384 × navegadores`.
 
 Antes de registrar los tests se valida:
@@ -42,10 +42,11 @@ Antes de registrar los tests se valida:
 - consistencia entre `ResultadoEsperado` y `ObjetivoBMI`;
 - ausencia de dependientes en perfiles individuales.
 
-Validación de tarifas no agrega otra hoja ni duplica configuraciones. Reutiliza
+Validación de tarifas no agrega otra hoja a `SuitePruebas.xlsx` ni duplica
+configuraciones. Reutiliza
 los perfiles cuyo `ResultadoEsperado` es `Emision` y cuyo `ObjetivoBMI` es
-`Ninguno`; el catálogo de países se lee de `PaisResidenciaSelect` al comenzar
-cada proyecto de navegador.
+`Ninguno`; los países se leen de `PaisResidenciaSelect` y los montos se resuelven
+contra `src/datos/tarifas/tarifas-af-2026-12.json`.
 
 ## Catálogo crítico para CI/CD
 

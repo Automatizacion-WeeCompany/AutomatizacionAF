@@ -225,16 +225,26 @@ export class SolicitudClaimsPage {
   }
 
   async ClickBtnAtenderSolicitud() {
-    const boton = this.page
-      .getByText(/Atender solicitud/i, { exact: true })
-      .first();
+    // Claims renderiza una copia oculta del botón para otros layouts. Los
+    // locators por rol ignoran esos nodos fuera del árbol de accesibilidad.
+    const boton = this.page.getByRole("button", {
+      name: /Atender solicitud/i,
+    });
 
     await expect(boton).toBeVisible({ timeout: 15000 });
+    await expect(boton).toBeEnabled({ timeout: 15000 });
+    const idBoton = await boton.getAttribute('id');
+    const botonAtendido = idBoton ? this.page.locator(`#${idBoton}`) : boton;
     await boton.click();
-    await expect(boton).toBeHidden({ timeout: 15000 });
+    // Claims marca el botón como atendido con la clase `hide`, aunque su CSS
+    // puede conservarlo visible. Validamos el estado y el contenido resultante.
+    await expect(botonAtendido).toHaveClass(/\bhide\b/, { timeout: 15000 });
     await expect(
       this.page.locator('a[href="#InformacionGeneralEmision"]'),
-    ).toBeVisible();
+    ).toBeVisible({ timeout: 15000 });
+    await expect(this.page.locator('#InformacionGeneralEmision')).toBeVisible({
+      timeout: 15000,
+    });
   }
 
   async ClickPestanaInformacionGeneral() {
